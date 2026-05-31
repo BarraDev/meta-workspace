@@ -47,5 +47,5 @@ contract the tooling implements.
 
 - Phase 1: workspace contract + `schemaVersion`. Done.
 - Phase 2: `mw` crate scaffolded (clap), functional `doctor`/`memory`/`hook`/`policy`/`migrate`, full test matrix. Done.
-- Phase 3: porting the stub commands to real behavior, TDD. Done — `add-project`, `links`, `init`, and `sdd install/update`. Remaining: retire the interim bash+python scripts as each reaches parity.
-- Phase 4: `cargo-dist` release pipeline and crate publication. Planned.
+- Phase 3: porting the stub commands to real behavior, TDD. Done — `add-project`, `links`, `init`, `sdd install/update`, full parity with the old scripts, and **all interim bash+python scripts retired**. `mw` is now the maintenance tool.
+- Phase 4: `cargo-dist` release pipeline and crate publication; author `.agents/policies.yaml` + harness enforcement adapters. Planned (next session).
