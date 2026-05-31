@@ -8,7 +8,16 @@ use std::path::PathBuf;
 
 use crate::cli::InitArgs;
 use crate::links::{ensure_link, LinkStatus, COMPAT_LINKS};
-use crate::{embed, workspace};
+use crate::{embed, scaffold, workspace};
+
+/// Parent-sibling working directories created next to a workspace.
+const PARENT_DIRS: &[&str] = &[
+    "../repos",
+    "../worktrees",
+    "../scratch",
+    "../archives",
+    "../logs",
+];
 
 pub fn run(args: InitArgs) -> anyhow::Result<()> {
     let root = PathBuf::from(args.path.clone().unwrap_or_else(|| ".".to_string()));
@@ -27,9 +36,11 @@ pub fn run(args: InitArgs) -> anyhow::Result<()> {
         summary.skipped.len()
     );
 
-    // 2. Stamp company fields into workspace.yaml (if provided and present).
-    if !args.common.dry_run && (args.company_id.is_some() || args.company_name.is_some()) {
-        stamp_company(&root, &args)?;
+    // 2. Stamp company fields and write .env.local (non-dry-run only).
+    if !args.common.dry_run {
+        stamp_workspace(&root, &args)?;
+        ensure_env_local(&root, &args)?;
+        create_parent_dirs(&root)?;
     }
 
     // 3. Recreate compatibility symlinks.
@@ -48,15 +59,60 @@ pub fn run(args: InitArgs) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn stamp_company(root: &std::path::Path, args: &InitArgs) -> anyhow::Result<()> {
+/// Resolve the workspace slug: explicit company id, else the existing
+/// `workspace.name`, else the target directory name.
+fn slug(root: &std::path::Path, args: &InitArgs, yaml: &str) -> String {
+    if let Some(id) = &args.company_id {
+        return id.clone();
+    }
+    if let Some(name) = workspace::read_scalar(yaml, "name") {
+        return name;
+    }
+    root.file_name()
+        .map(|n| n.to_string_lossy().to_string())
+        .unwrap_or_else(|| "meta-workspace".to_string())
+}
+
+fn stamp_workspace(root: &std::path::Path, args: &InitArgs) -> anyhow::Result<()> {
     let wf = root.join(workspace::WORKSPACE_FILE);
     let mut yaml = std::fs::read_to_string(&wf)?;
+    let s = slug(root, args, &yaml);
+
     if let Some(id) = &args.company_id {
         yaml = workspace::set_scalar(&yaml, "company_id", id)?;
+        yaml = workspace::set_scalar(&yaml, "name", &s)?;
     }
     if let Some(name) = &args.company_name {
         yaml = workspace::set_scalar(&yaml, "company_name", name)?;
     }
     std::fs::write(&wf, yaml)?;
+
+    // company/profile.md Name/Slug (only when something to stamp).
+    if args.company_id.is_some() || args.company_name.is_some() {
+        let profile_path = root.join("company/profile.md");
+        if let Ok(md) = std::fs::read_to_string(&profile_path) {
+            let display = args.company_name.clone().unwrap_or_else(|| s.clone());
+            std::fs::write(&profile_path, scaffold::stamp_profile(&md, &display, &s))?;
+        }
+    }
+    Ok(())
+}
+
+fn ensure_env_local(root: &std::path::Path, args: &InitArgs) -> anyhow::Result<()> {
+    let env_path = root.join(".env.local");
+    if env_path.exists() {
+        return Ok(());
+    }
+    let yaml = std::fs::read_to_string(root.join(workspace::WORKSPACE_FILE)).unwrap_or_default();
+    let s = slug(root, args, &yaml);
+    std::fs::write(&env_path, scaffold::render_env_local(&s, "none"))?;
+    println!("init: created .env.local (slug = {s})");
+    Ok(())
+}
+
+fn create_parent_dirs(root: &std::path::Path) -> anyhow::Result<()> {
+    for dir in PARENT_DIRS {
+        std::fs::create_dir_all(root.join(dir))?;
+    }
     Ok(())
 }

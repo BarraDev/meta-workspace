@@ -7,6 +7,7 @@
 use std::path::Path;
 
 use crate::cli::{DoctorArgs, SCHEMA_VERSION};
+use crate::links::COMPAT_LINKS;
 use crate::workspace;
 
 pub fn run(args: DoctorArgs) -> anyhow::Result<()> {
@@ -39,16 +40,23 @@ pub fn run(args: DoctorArgs) -> anyhow::Result<()> {
     require_dir(&root, ".agents", &mut errors);
     require_file(&root, ".agents/AGENTS.md", &mut errors);
 
-    // 3. symlink compatibility layer
-    for link in ["AGENTS.md", "CLAUDE.md", "GEMINI.md"] {
-        check_symlink(&root, link, ".agents/AGENTS.md", &mut warnings);
+    // 3. symlink compatibility layer (all compat links)
+    for spec in COMPAT_LINKS {
+        check_symlink(&root, spec.name, spec.target, &mut warnings);
     }
 
     // 4. structured files mw owns
     require_file(&root, "projects/registry.yaml", &mut warnings);
+    require_file(&root, "company/profile.md", &mut warnings);
 
     // 5. parent-sibling working dirs (informational)
-    for sibling in ["../repos", "../worktrees"] {
+    for sibling in [
+        "../repos",
+        "../worktrees",
+        "../scratch",
+        "../archives",
+        "../logs",
+    ] {
         if !root.join(sibling).is_dir() {
             warnings.push(format!(
                 "{sibling} does not exist yet (created on first use)"

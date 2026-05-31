@@ -121,6 +121,9 @@ pub struct MemoryArgs {
     /// Memory profile to configure. Omit to print the current profile.
     #[arg(long, value_enum)]
     pub profile: Option<MemoryProfile>,
+    /// Workspace memory slug for `.env.local` (MEMPALACE_WING / PRISM_PROJECT).
+    #[arg(long)]
+    pub slug: Option<String>,
     #[command(flatten)]
     pub common: CommonFlags,
 }

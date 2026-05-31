@@ -228,6 +228,15 @@ fn init_materializes_a_working_workspace() {
     assert!(root.join(".agents/AGENTS.md").is_file());
     assert!(root.join("projects/registry.yaml").is_file());
 
+    // bootstrap parity: .env.local, parent dirs, stamped profile
+    let env = std::fs::read_to_string(root.join(".env.local")).unwrap();
+    assert!(env.contains("MEMPALACE_WING=acme"));
+    assert!(env.contains("MEMORY_PROFILE=none"));
+    assert!(root.join("../repos").is_dir() && root.join("../worktrees").is_dir());
+    let profile = std::fs::read_to_string(root.join("company/profile.md")).unwrap();
+    assert!(profile.contains("- Name: Acme Inc"));
+    assert!(profile.contains("- Slug: acme"));
+
     // compat symlinks recreated (top-level and nested)
     assert_eq!(
         std::fs::read_link(root.join("AGENTS.md"))
@@ -264,6 +273,22 @@ fn init_dry_run_writes_nothing() {
     let out = run(&root, &["init", "--dry-run"], "");
     assert!(out.status.success());
     assert!(!root.join("workspace.yaml").exists());
+    std::fs::remove_dir_all(&root).ok();
+}
+
+#[test]
+fn memory_slug_updates_env_local() {
+    let root = fixture();
+    let out = run(
+        &root,
+        &["memory", "--profile", "mempalace", "--slug", "acme"],
+        "",
+    );
+    assert!(out.status.success(), "{}", stdout(&out));
+    let env = std::fs::read_to_string(root.join(".env.local")).unwrap();
+    assert!(env.contains("MEMORY_PROFILE=mempalace"));
+    assert!(env.contains("MEMPALACE_WING=acme"));
+    assert!(env.contains("PRISM_PROJECT=acme"));
     std::fs::remove_dir_all(&root).ok();
 }
 
