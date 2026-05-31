@@ -18,10 +18,11 @@ Both the future `mw` Rust binary and any harness adapter (or `mw eject` output) 
 - Language: Rust (single static binary, zero runtime dependency).
 - crate name: `meta-workspace` (crates.io — verified available).
 - binary name: `mw`.
-- Distribution channels (npm-free):
+- Current Phase 4A distribution: authorized checkout plus `cargo install --path tooling --locked`.
+- Future official distribution channels (npm-free):
   - GitHub Releases (prebuilt binaries, checksums),
   - `cargo-binstall` (prebuilt fetch),
-  - `cargo install` (from source),
+  - `cargo install meta-workspace` from crates.io, if publishing is approved,
   - `curl | sh` installer + Homebrew tap (later),
   - release pipeline managed by `cargo-dist` on GitHub runners.
 

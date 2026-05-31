@@ -17,6 +17,17 @@ cargo build --release   # produces target/release/mw
 cargo test
 ```
 
+## Install from a checkout
+
+From the repository root:
+
+```bash
+cargo install --path tooling --locked --force
+mw --version
+```
+
+Use this path for early authorized installs. Official binary releases should be added later with `cargo-dist`.
+
 ## Testing
 
 The crate is split into a thin `mw` binary over a `meta_workspace` library so it
