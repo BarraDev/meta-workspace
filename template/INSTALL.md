@@ -19,22 +19,19 @@ work-root/
 From the intended meta-workspace folder:
 
 ```bash
-./scripts/bootstrap.sh
-./scripts/doctor.sh
+mw init
+mw doctor
 ```
 
 Non-interactive example:
 
 ```bash
-./scripts/bootstrap.sh \
-  --name="Example Company" \
-  --slug="example-company" \
-  --init-git=yes \
-  --create-dirs=yes \
-  --non-interactive
+mw init \
+  --company-name "Example Company" \
+  --company-id example-company
 ```
 
-Bootstrap will create or verify these parent sibling folders by default:
+`mw init` will create or verify these parent sibling folders by default:
 
 - `../repos`
 - `../worktrees`
@@ -45,33 +42,19 @@ Bootstrap will create or verify these parent sibling folders by default:
 ## Add a project
 
 ```bash
-./scripts/new-project.sh
+mw add-project \
+  --id api \
+  --name "API" \
+  --repo-url "git@github.com:example/api.git" \
+  --default-branch main
 ```
 
-Non-interactive example:
-
-```bash
-./scripts/new-project.sh \
-  --id=api \
-  --name="API" \
-  --repo-url="git@github.com:example/api.git" \
-  --default-branch=main \
-  --language=go \
-  --non-interactive
-```
-
-The helper updates `projects/registry.yaml` and creates a project instruction stub under `docs/instructions/` by default. It does not clone repositories or create worktrees.
+This updates `projects/registry.yaml` (rejecting duplicate ids). It does not clone repositories or create worktrees.
 
 ## Optional memory
 
 ```bash
-./scripts/install-memory.sh
-```
-
-Non-interactive example:
-
-```bash
-./scripts/install-memory.sh --profile=mempalace --slug=example-company --non-interactive
+mw memory --profile mempalace --slug example-company
 ```
 
 Supported profiles:
@@ -81,23 +64,23 @@ Supported profiles:
 - `prism`
 - `full`
 
-This writes `.env.local` and updates the memory section in `workspace.yaml`. Do not store secrets in either file.
+This updates the memory profile in `workspace.yaml` and mirrors it into `.env.local`. Do not store secrets in either file.
 
 ## Optional SDD/Kiro
 
 ```bash
-./scripts/install-sdd.sh --dry-run-only --targets=claude
-./scripts/install-sdd.sh
+mw sdd install --dry-run-only --targets claude
+mw sdd install
 ```
 
-The SDD installer uses `cc-sdd`, always runs a dry run first, and asks before applying changes.
+The SDD installer uses `cc-sdd`, always runs a dry run first, and applies changes in a controlled way.
 
 By default, it applies `cc-sdd` in a temporary staging directory, copies generated skills/settings into controlled locations, stores the generated memory document at `.agents/vendor/cc-sdd/CLAUDE.md`, and preserves the live `CLAUDE.md -> .agents/AGENTS.md` symlink.
 
 Use direct mode only if you intentionally want `cc-sdd` to write live tool files:
 
 ```bash
-./scripts/install-sdd.sh --mode=direct --memory-policy=replace --targets=claude
+mw sdd install --mode direct --memory-policy replace --targets claude
 ```
 
 ## Agent-assisted installation checklist
@@ -106,7 +89,7 @@ AI coding agents should:
 
 1. Confirm the current directory is the intended meta-workspace.
 2. List existing files and ask before overwriting any real files.
-3. Run `./scripts/bootstrap.sh` or reproduce its steps explicitly.
+3. Run `mw init` (it preserves existing files and repairs symlinks).
 4. Keep application repositories in `../repos` and worktrees in `../worktrees` unless the user says otherwise.
-5. Run `./scripts/doctor.sh`.
+5. Run `mw doctor`.
 6. Report changed files, commands run, and remaining manual steps.

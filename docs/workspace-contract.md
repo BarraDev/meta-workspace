@@ -70,11 +70,14 @@ To stay robust without a heavyweight YAML parser (and to avoid the unmaintained 
 
 ## Session warm-up
 
-`scripts/session-start.sh` is the current interim implementation and stays until the Rust binary is ready. It will be replaced by:
+Session warm-up is provided by:
 
 ```
 mw hook session-start
 ```
+
+(The former interim `scripts/session-start.sh` has been retired now that the
+Rust binary is at parity.)
 
 Behavior:
 

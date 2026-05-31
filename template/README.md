@@ -12,7 +12,7 @@ Use a meta-workspace to coordinate one company's projects, repositories, worktre
 - Compatibility links for Claude, Pi, Gemini, and related agent tools.
 - Optional memory configuration for MemPalace, Prism, or both.
 - Optional SDD/Kiro support installed through `cc-sdd`.
-- Project registry and helper scripts for adding repositories.
+- Project registry and the `mw` tool for adding repositories.
 - Draft-only PR workflow guidance for AI agents.
 
 ## Recommended layout
@@ -39,60 +39,44 @@ The default paths are intentionally outside the meta-workspace:
 
 ## First run
 
-Interactive setup:
+The `mw` tool materializes and maintains a workspace:
 
 ```bash
-./scripts/bootstrap.sh
-./scripts/doctor.sh
+mw init
+mw doctor
 ```
 
 Non-interactive setup example:
 
 ```bash
-./scripts/bootstrap.sh \
-  --name="Example Company" \
-  --slug="example-company" \
-  --init-git=yes \
-  --create-dirs=yes \
-  --non-interactive
+mw init \
+  --company-name "Example Company" \
+  --company-id example-company
 
-./scripts/doctor.sh
+mw doctor
 ```
+
+`mw init` creates the parent folders (`../repos`, `../worktrees`, ...), writes
+`.env.local`, stamps `company/profile.md`, and recreates the agent compatibility
+symlinks. It is idempotent, so re-running it repairs a workspace.
 
 ## Add projects
 
-Interactive:
-
 ```bash
-./scripts/new-project.sh
+mw add-project \
+  --id api \
+  --name "API" \
+  --repo-url "git@github.com:example/api.git" \
+  --default-branch main
 ```
 
-Non-interactive:
-
-```bash
-./scripts/new-project.sh \
-  --id=api \
-  --name="API" \
-  --repo-url="git@github.com:example/api.git" \
-  --default-branch=main \
-  --language=go \
-  --non-interactive
-```
-
-The helper updates `projects/registry.yaml` and creates a project instruction stub. It does not clone repositories.
+This updates `projects/registry.yaml` (rejecting duplicate ids). It does not
+clone repositories.
 
 ## Optional memory
 
-Interactive:
-
 ```bash
-./scripts/install-memory.sh
-```
-
-Non-interactive:
-
-```bash
-./scripts/install-memory.sh --profile=mempalace --slug=example-company --non-interactive
+mw memory --profile mempalace --slug example-company
 ```
 
 Supported profiles:
@@ -107,13 +91,13 @@ Supported profiles:
 Dry run only:
 
 ```bash
-./scripts/install-sdd.sh --dry-run-only --targets=claude
+mw sdd install --dry-run-only --targets claude
 ```
 
 Controlled staged install:
 
 ```bash
-./scripts/install-sdd.sh --targets=claude
+mw sdd install --targets claude
 ```
 
 By default, SDD install runs `cc-sdd` in a temporary staging directory and preserves the live `CLAUDE.md` symlink to `.agents/AGENTS.md`. The generated `cc-sdd` memory document is stored at:
@@ -125,7 +109,7 @@ By default, SDD install runs `cc-sdd` in a temporary staging directory and prese
 Use direct mode only when you intentionally want `cc-sdd` to write directly into live tool files:
 
 ```bash
-./scripts/install-sdd.sh --mode=direct --memory-policy=replace --targets=claude
+mw sdd install --mode direct --memory-policy replace --targets claude
 ```
 
 ## Important files

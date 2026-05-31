@@ -46,11 +46,11 @@ via `std::process::Command` and `CARGO_BIN_EXE_mw`.
 |---------|--------|-------|
 | `mw init` | working | materialize/repair a workspace from the embedded template |
 | `mw doctor` | working | validate the workspace against the contract |
-| `mw links` | working | reconcile compat symlinks (interim: `scripts/install-agent-links.sh`) |
-| `mw add-project` | working | append to `projects/registry.yaml` (interim: `scripts/new-project.sh`) |
-| `mw memory` | working | read/set the memory profile (`none\|mempalace\|prism\|full`) |
-| `mw sdd` | working | `status` + controlled cc-sdd `install`/`update` (interim: `scripts/install-sdd.sh`) |
-| `mw hook session-start` | working | non-blocking warm-up (interim: `scripts/session-start.sh`) |
+| `mw links` | working | reconcile compat symlinks |
+| `mw add-project` | working | append to `projects/registry.yaml` |
+| `mw memory` | working | read/set the memory profile (`none\|mempalace\|prism\|full`) + `.env.local` |
+| `mw sdd` | working | `status` + controlled cc-sdd `install`/`update` |
+| `mw hook session-start` | working | non-blocking mempalace warm-up |
 | `mw policy check` | working | cross-harness enforcement engine (stdin event → stdout decision) |
 | `mw migrate` | working | upgrade `schemaVersion` (no steps registered for v1) |
 

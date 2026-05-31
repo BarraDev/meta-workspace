@@ -9,8 +9,8 @@ This folder tracks optional SDD/Kiro integration state.
 Use:
 
 ```bash
-./scripts/install-sdd.sh --dry-run-only --targets=claude
-./scripts/install-sdd.sh --targets=claude
+mw sdd install --dry-run-only --targets claude
+mw sdd install --targets claude
 ```
 
 By default, the installer runs `cc-sdd` in a temporary staging directory, copies generated skills/settings into controlled locations, and stores the generated `CLAUDE.md` memory document at:
@@ -24,5 +24,5 @@ The live `CLAUDE.md -> .agents/AGENTS.md` symlink is preserved.
 Use direct mode only when you explicitly want `cc-sdd` to write live tool files:
 
 ```bash
-./scripts/install-sdd.sh --mode=direct --memory-policy=replace --targets=claude
+mw sdd install --mode direct --memory-policy replace --targets claude
 ```

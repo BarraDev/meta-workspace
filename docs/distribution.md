@@ -24,7 +24,7 @@ Example:
 ```bash
 git clone <template-repo-url> meta-workspace
 cd meta-workspace
-./scripts/bootstrap.sh
+mw init
 ```
 
 ## Option 2: Archive release
@@ -58,7 +58,7 @@ Cons:
 
 ## Option 4: Bootstrap-from-URL script
 
-Provide a future `scripts/bootstrap-from-github.sh` or a documented `curl` flow that downloads the template into an empty folder and runs bootstrap.
+Provide a future `mw init --template <git-ref>` flow or a documented `curl` flow that downloads the template into an empty folder and runs `mw init`.
 
 Pros:
 

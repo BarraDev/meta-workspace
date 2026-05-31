@@ -1,4 +1,4 @@
 personality = "friendly"
 
-# Optional MCP servers can be configured by the user or by scripts/install-memory.sh.
+# Optional MCP servers can be configured by the user or via `mw memory`.
 # Do not store secrets here.

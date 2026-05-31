@@ -10,9 +10,9 @@ Reference:
 Recommended flow:
 
 ```bash
-./scripts/install-sdd.sh
+mw sdd install
 ```
 
-The installer should run a dry run first and ask for confirmation before applying changes.
+The installer runs a dry run first and applies changes in a controlled, staged way by default.
 
 Use SDD when work benefits from explicit requirements, design, task boundaries, validation, and resumable implementation. Do not force SDD for small direct changes.

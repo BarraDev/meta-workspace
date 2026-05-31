@@ -17,10 +17,13 @@ If you are an AI coding agent installing this template:
 5. Create or repair agent compatibility symlinks.
 6. Initialize git if requested.
 7. Optionally configure memory.
-8. Optionally install SDD/Kiro skills using the controlled `./scripts/install-sdd.sh` wrapper around `cc-sdd`.
-9. Add projects with `./scripts/new-project.sh` or edit `projects/registry.yaml` manually.
-10. Run `./scripts/doctor.sh`.
+8. Optionally install SDD/Kiro skills using the controlled `mw sdd install` wrapper around `cc-sdd`.
+9. Add projects with `mw add-project` or edit `projects/registry.yaml` manually.
+10. Run `mw doctor`.
 11. Report what changed and what remains.
+
+Most of steps 4–7 are performed by `mw init` (parent folders, `.env.local`,
+company stamping, and symlinks). Run `mw doctor` to validate.
 
 ## Setup questions
 
