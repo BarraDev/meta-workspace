@@ -2,23 +2,35 @@
 name = "meta-workspace"
 version = "0.1.0"
 edition = "2021"
-rust-version = "1.74"
+rust-version = "1.85"
+authors = ["BarraDev <ruiandrada@barradev.com>"]
 description = "mw — maintenance CLI for the generic one-company-at-a-time meta-workspace template."
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/BarraDev/meta-workspace"
 readme = "README.md"
 keywords = ["workspace", "agents", "cli", "monorepo", "tooling"]
 categories = ["command-line-utilities", "development-tools"]
+# The manifest lives at the repository root so the embedded `template/` tree
+# (a root sibling of `tooling/`) is inside the crate package and ships with
+# `cargo publish` / `cargo install --git`. The Rust sources stay under
+# `tooling/`; the target paths below point the compiler at them.
+# HANDOFF.md is gitignored, so `cargo package` already omits it; only tracked
+# files that should not ship in the published crate need listing here.
+exclude = ["docs/", ".github/", "tooling/README.md"]
 
 # The crate is published as `meta-workspace`; the installed binary is `mw`.
 # A thin lib target enables doc tests and library-level integration tests.
 [lib]
 name = "meta_workspace"
-path = "src/lib.rs"
+path = "tooling/src/lib.rs"
 
 [[bin]]
 name = "mw"
-path = "src/main.rs"
+path = "tooling/src/main.rs"
+
+[[test]]
+name = "cli"
+path = "tooling/tests/cli.rs"
 
 [dependencies]
 anyhow = "1"

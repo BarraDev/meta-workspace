@@ -9,8 +9,9 @@ use std::path::Path;
 
 use include_dir::{include_dir, Dir};
 
-/// The embedded `template/` directory (sibling of the `tooling/` crate).
-pub static TEMPLATE: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/../template");
+/// The embedded `template/` directory. The crate manifest lives at the
+/// repository root, so `template/` sits directly under `$CARGO_MANIFEST_DIR`.
+pub static TEMPLATE: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/template");
 
 /// Flatten the embedded template into `(relative_path, contents)` pairs.
 pub fn files() -> Vec<(String, &'static [u8])> {

@@ -1,8 +1,8 @@
 version: 2
 updates:
-  # Cargo dependencies for the mw binary
+  # Cargo dependencies for the mw binary (manifest at repo root)
   - package-ecosystem: cargo
-    directory: /tooling
+    directory: /
     schedule:
       interval: weekly
       day: monday

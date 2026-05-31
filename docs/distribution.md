@@ -21,20 +21,28 @@ Prerequisites:
 - Rust toolchain with Cargo.
 - Access to the repository.
 
-Install:
+Install directly from Git (the crate manifest is at the repository root, so no
+local clone is required):
+
+```bash
+cargo install --git https://github.com/BarraDev/meta-workspace --locked --force
+mw --version
+```
+
+Or install from a local checkout (useful when developing):
 
 ```bash
 mkdir -p "$HOME/src"
 git clone git@github.com:BarraDev/meta-workspace.git "$HOME/src/meta-workspace"
-cargo install --path "$HOME/src/meta-workspace/tooling" --locked --force
+cargo install --path "$HOME/src/meta-workspace" --locked --force
 mw --version
 ```
 
-Update an existing install:
+Update an existing checkout-based install:
 
 ```bash
 git -C "$HOME/src/meta-workspace" pull --ff-only
-cargo install --path "$HOME/src/meta-workspace/tooling" --locked --force
+cargo install --path "$HOME/src/meta-workspace" --locked --force
 mw --version
 ```
 
@@ -47,16 +55,15 @@ mw init --company-name "Example Company" --company-id example-company
 mw doctor
 ```
 
-This uses `cargo install --path` instead of `cargo install --git` because the crate currently lives in `tooling/`, and the committed lockfile also lives there. The path install keeps the current repository shape and honors `tooling/Cargo.lock` with `--locked`.
+Both forms honor the committed `Cargo.lock` with `--locked`. `cargo install --git` works because the crate manifest sits at the repository root with the embedded `template/` tree inside the package; the Rust sources live under `tooling/` via explicit target paths in `Cargo.toml`. This same layout makes the crate publishable to crates.io when that channel is approved.
 
 ## Internal tags before official releases
 
 If a stable internal checkpoint is needed before official release automation exists:
 
-1. Run the gates:
+1. Run the gates (from the repository root):
 
    ```bash
-   cd tooling
    cargo fmt --check
    cargo clippy --all-targets -- -D warnings
    cargo test
@@ -69,12 +76,12 @@ If a stable internal checkpoint is needed before official release automation exi
    git push origin v0.1.0-internal.1
    ```
 
-3. Install from a checkout at that tag:
+3. Install from a checkout at that tag (or `cargo install --git ... --tag <tag>`):
 
    ```bash
    git -C "$HOME/src/meta-workspace" fetch --tags
    git -C "$HOME/src/meta-workspace" checkout v0.1.0-internal.1
-   cargo install --path "$HOME/src/meta-workspace/tooling" --locked --force
+   cargo install --path "$HOME/src/meta-workspace" --locked --force
    ```
 
 Return the checkout to `main` when continuing development:
@@ -83,6 +90,21 @@ Return the checkout to `main` when continuing development:
 git -C "$HOME/src/meta-workspace" checkout main
 git -C "$HOME/src/meta-workspace" pull --ff-only
 ```
+
+## Binary releases: GitHub Releases on tag
+
+A tag-triggered workflow (`.github/workflows/release.yml`) builds `mw` for Linux,
+macOS, and Windows, generates SHA-256 checksums, and attaches the archives to a
+GitHub Release. Push a `v*` tag to produce a release:
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+This is intentionally a plain build-and-upload workflow with no extra tooling.
+`cargo-dist` remains the planned upgrade for richer installers and
+`cargo-binstall` metadata when official release cadence begins.
 
 ## Official release path: cargo-dist later
 
@@ -103,16 +125,16 @@ Readiness checklist before adding `cargo-dist`:
 - Confirm crate ownership, license, README, categories, keywords, and repository metadata.
 - Confirm versioning policy for the embedded template and `workspace.yaml` schema.
 - Decide supported target triples for Linux, macOS, and Windows.
-- Add release CI triggered by tags.
+- Release CI triggered by tags exists (`release.yml`); `cargo-dist` would replace it for richer installers.
 - Verify generated archives, checksums, and installer output on a dry run.
 
 ## Channel progression
 
 | Stage | Channel | Use when |
 |---|---|---|
-| 4A | private checkout + `cargo install --path tooling --locked` | current development and early authorized use |
-| 4B | internal Git tags + path install | stable internal checkpoints before official automation |
-| 4C | GitHub Releases via `cargo-dist` | official binary releases |
+| 4A | `cargo install --git` / `--path` + `--locked` | current development and early authorized use |
+| 4B | internal Git tags + `cargo install --git ... --tag` | stable internal checkpoints before official automation |
+| 4C | GitHub Releases (prebuilt binaries) via `release.yml` on `v*` tags | binary downloads today; `cargo-dist` upgrade later |
 | 4D | crates.io / `cargo-binstall` / Homebrew | broader distribution after release cadence is proven |
 
 ## Non-goals for now

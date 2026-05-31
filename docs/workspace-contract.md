@@ -18,7 +18,7 @@ Both the future `mw` Rust binary and any harness adapter (or `mw eject` output) 
 - Language: Rust (single static binary, zero runtime dependency).
 - crate name: `meta-workspace` (crates.io — verified available).
 - binary name: `mw`.
-- Current Phase 4A distribution: authorized checkout plus `cargo install --path tooling --locked`.
+- Current Phase 4A distribution: `cargo install --git https://github.com/BarraDev/meta-workspace --locked` (or `--path` from a checkout). Tagged binary releases via `.github/workflows/release.yml`.
 - Future official distribution channels (npm-free):
   - GitHub Releases (prebuilt binaries, checksums),
   - `cargo-binstall` (prebuilt fetch),
@@ -130,7 +130,7 @@ Policies live in a neutral file (`.agents/policies.yaml`) and are evaluated by `
 
 - protect paths: deny writes to `.env`, `secrets/`.
 - enforce worktree: deny/warn write tools targeting configured clean checkout paths such as `../repos`, while allowing configured worktree paths such as `../worktrees`.
-- draft-only PR: block PR comment/review/approve/post events without an explicit approval field in the event input (`explicit_user_approval`, `user_approved`, `mw_user_approved`, `approved_by_user`, `posting_allowed`, or `mw_policy.user_approved`).
+- draft-only PR: block PR comment/review/approve/post events unless the user has authorized publishing out-of-band via the `MW_USER_APPROVED` environment variable (`1`/`true`/`yes`). Approval is read from the environment, never from the event payload, so the agent constructing the tool call cannot self-approve.
 - session warm-up: only if mempalace/prism configured.
 
 ### Honest limits

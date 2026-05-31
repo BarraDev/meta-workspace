@@ -10,6 +10,7 @@ use std::path::Path;
 use std::process::Command;
 
 use crate::cli::{SddAction, SddArgs, SddInstallArgs, SddMemoryPolicy, SddMode, SddTargets};
+use crate::commands::which;
 use crate::sdd::{self, Target};
 use crate::workspace;
 
@@ -170,17 +171,6 @@ fn status(root: &Path) -> anyhow::Result<()> {
 }
 
 // --- helpers ---------------------------------------------------------------
-
-fn which(bin: &str) -> Option<std::path::PathBuf> {
-    let path = std::env::var_os("PATH")?;
-    for dir in std::env::split_paths(&path) {
-        let candidate = dir.join(bin);
-        if candidate.is_file() {
-            return Some(candidate);
-        }
-    }
-    None
-}
 
 fn run_cmd(bin: &Path, args: &[&str], cwd: &Path) -> anyhow::Result<()> {
     let status = Command::new(bin).args(args).current_dir(cwd).status()?;

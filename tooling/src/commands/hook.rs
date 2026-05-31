@@ -5,6 +5,7 @@
 //! scripts/session-start.sh once at parity.
 
 use crate::cli::{HookArgs, HookEvent};
+use crate::commands::which;
 use crate::workspace;
 
 pub fn run(args: HookArgs) -> anyhow::Result<()> {
@@ -73,13 +74,6 @@ fn env_wing(root: &std::path::Path) -> Option<String> {
         }
     }
     None
-}
-
-fn which(bin: &str) -> Option<std::path::PathBuf> {
-    let path = std::env::var_os("PATH")?;
-    std::env::split_paths(&path)
-        .map(|d| d.join(bin))
-        .find(|c| c.is_file())
 }
 
 fn run_quiet(bin: &str, args: &[&str]) -> bool {

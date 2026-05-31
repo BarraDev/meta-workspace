@@ -1,22 +1,29 @@
-name: tooling
+name: ci
 
+# The crate manifest is at the repository root; all cargo commands run there.
 on:
   push:
     paths:
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "rust-toolchain.toml"
+      - "deny.toml"
       - "tooling/**"
+      - "template/**"
       - ".github/workflows/tooling.yml"
   pull_request:
     paths:
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "rust-toolchain.toml"
+      - "deny.toml"
       - "tooling/**"
+      - "template/**"
       - ".github/workflows/tooling.yml"
-
-defaults:
-  run:
-    working-directory: tooling
 
 jobs:
   test:
-    name: fmt + clippy + test
+    name: fmt + clippy + test (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -27,11 +34,33 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
       - name: Format check
         run: cargo fmt --check
       - name: Clippy (deny warnings)
         run: cargo clippy --all-targets -- -D warnings
-      - name: Tests (unit + integration + doc)
+      - name: Tests (unit + integration)
         run: cargo test --all-targets
       - name: Doc tests
         run: cargo test --doc
+
+  msrv:
+    name: msrv (1.85)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.85
+      - uses: Swatinem/rust-cache@v2
+      - name: Build at the pinned minimum supported Rust version
+        run: cargo build --locked
+      - name: Test at MSRV
+        run: cargo test --locked
+
+  deny:
+    name: cargo-deny (supply chain)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check

@@ -21,8 +21,9 @@ template/.claude/.cache/
 template/.codex/sessions/
 HANDOFF.md
 
-# Rust tooling build artifacts (Cargo.lock IS committed for the binary crate)
-tooling/target/
+# Rust build artifacts (Cargo.lock IS committed for the binary crate).
+# The crate manifest is at the repo root, so target/ is here too.
+/target/
 
 # Dependency/vendor folders
 node_modules/

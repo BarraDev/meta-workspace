@@ -27,7 +27,7 @@
 Before submitting, confirm all of these pass:
 
 ```bash
-cd tooling
+# Run from the repository root (the crate manifest lives there).
 cargo fmt --check
 cargo clippy --all-targets -- -D warnings
 cargo test

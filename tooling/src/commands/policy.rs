@@ -26,6 +26,12 @@ struct Event {
     tool_name: String,
     #[serde(default)]
     tool_input: serde_json::Value,
+    /// Out-of-band user approval, set from the environment by [`check`] — never
+    /// deserialized from the payload. Approval must come from a channel the
+    /// agent constructing this event cannot forge (see
+    /// [`user_approved_out_of_band`]).
+    #[serde(skip)]
+    user_approved: bool,
 }
 
 /// Harness-neutral decision returned on stdout.
@@ -48,11 +54,15 @@ fn check() -> anyhow::Result<()> {
     std::io::stdin().read_to_string(&mut raw)?;
 
     // A malformed or empty event must not crash a tool call: default to allow.
-    let event: Event = if raw.trim().is_empty() {
+    let mut event: Event = if raw.trim().is_empty() {
         Event::default()
     } else {
         serde_json::from_str(&raw).unwrap_or_default()
     };
+    // The approval signal is read from the environment, NOT the payload: the
+    // process that builds the event (the agent) cannot set the parent
+    // environment of this `mw policy check` subprocess, so it cannot self-approve.
+    event.user_approved = user_approved_out_of_band();
 
     let policy = load_policy();
     let decision = evaluate(&event, &policy);
@@ -270,12 +280,13 @@ fn evaluate(event: &Event, policy: &Policy) -> Decision {
 
     if policy.draft_only_pr_enabled
         && is_pr_publish_event(&event.tool_name, &event.tool_input)
-        && (!policy.require_explicit_user_approval
-            || !has_explicit_user_approval(&event.tool_input))
+        && (!policy.require_explicit_user_approval || !event.user_approved)
     {
         return decision_for_effect(
             policy.draft_only_pr_action,
-            "PR comments, approvals, or review submissions require explicit user approval".into(),
+            "PR comments, approvals, or review submissions require explicit user approval \
+             (set MW_USER_APPROVED=1 in the environment to authorize)"
+                .into(),
         );
     }
 
@@ -330,8 +341,13 @@ fn is_under_any_root(path: &str, roots: &[String]) -> bool {
 }
 
 fn is_under_root(path: &str, root: &str) -> bool {
+    // Exact match or a true path-prefix only. A `path.contains("/{root}/")`
+    // arm was removed: it false-matched any path with the root name as an
+    // interior segment (e.g. `/a/repos/b` for root `repos`). Absolute paths
+    // configured via relative roots are handled by `load_policy`, which also
+    // pushes the resolved absolute root as a candidate.
     let root = normalize_path(root).trim_end_matches('/').to_string();
-    path == root || path.starts_with(&format!("{root}/")) || path.contains(&format!("/{root}/"))
+    path == root || path.starts_with(&format!("{root}/"))
 }
 
 fn normalize_path(path: &str) -> String {
@@ -373,31 +389,20 @@ fn is_pr_publish_command(command: &str) -> bool {
             && (command.contains("/comments") || command.contains("/reviews")))
 }
 
-fn has_explicit_user_approval(input: &serde_json::Value) -> bool {
-    for key in [
-        "mw_user_approved",
-        "user_approved",
-        "explicit_user_approval",
-        "approved_by_user",
-        "posting_allowed",
-    ] {
-        if input.get(key).is_some_and(is_truthy_json) {
-            return true;
-        }
-    }
-
-    input
-        .get("mw_policy")
-        .and_then(|v| v.get("user_approved"))
-        .is_some_and(is_truthy_json)
-}
-
-fn is_truthy_json(value: &serde_json::Value) -> bool {
-    match value {
-        serde_json::Value::Bool(true) => true,
-        serde_json::Value::String(s) => matches!(s.as_str(), "true" | "yes" | "approved"),
-        _ => false,
-    }
+/// True when the user has authorized PR publishing out-of-band, via the
+/// `MW_USER_APPROVED` environment variable.
+///
+/// Approval deliberately comes from the environment rather than the event
+/// payload. The agent that constructs a tool call (and thus the `tool_input`
+/// JSON) cannot set the environment of the separate `mw policy check`
+/// subprocess, so it cannot grant itself approval. The user (or harness, on the
+/// user's behalf) exports `MW_USER_APPROVED=1` to authorize. This is a coarse,
+/// session-scoped signal — that is an accepted limitation, documented in
+/// `.agents/policies.yaml` and `SECURITY.md`.
+fn user_approved_out_of_band() -> bool {
+    std::env::var("MW_USER_APPROVED")
+        .ok()
+        .is_some_and(|v| matches!(v.trim().to_ascii_lowercase().as_str(), "1" | "true" | "yes"))
 }
 
 #[cfg(test)]
@@ -524,17 +529,36 @@ mod tests {
     }
 
     #[test]
-    fn allows_pr_publish_with_explicit_user_approval() {
+    fn allows_pr_publish_with_out_of_band_approval() {
+        let policy = policy_with_workflow_gates();
+        // Approval comes from the out-of-band signal (env var, surfaced as
+        // `user_approved`), never from an agent-supplied payload field.
+        let event = Event {
+            tool_name: "Bash".into(),
+            tool_input: serde_json::json!({ "command": "gh pr review 12 --approve" }),
+            user_approved: true,
+            ..Default::default()
+        };
+        assert!(matches!(evaluate(&event, &policy), Decision::Allow));
+    }
+
+    #[test]
+    fn payload_field_cannot_self_approve_pr_publish() {
+        // Regression guard for the old loophole: setting approval-looking keys
+        // in the agent-controlled tool_input must NOT grant approval.
         let policy = policy_with_workflow_gates();
         let event = Event {
             tool_name: "Bash".into(),
             tool_input: serde_json::json!({
                 "command": "gh pr review 12 --approve",
-                "explicit_user_approval": true
+                "explicit_user_approval": true,
+                "user_approved": true,
+                "mw_policy": { "user_approved": true }
             }),
+            // user_approved stays false: no out-of-band approval was given.
             ..Default::default()
         };
-        assert!(matches!(evaluate(&event, &policy), Decision::Allow));
+        assert!(matches!(evaluate(&event, &policy), Decision::Deny { .. }));
     }
 
     #[test]

@@ -6,16 +6,17 @@ Thank you for your interest in contributing. This guide covers the development w
 
 | Path | Purpose |
 |---|---|
-| `tooling/` | Rust crate `meta-workspace`; the `mw` binary. |
+| `Cargo.toml` | Crate manifest `meta-workspace` at the repo root; target paths point at `tooling/src`, and the root location lets the embedded `template/` ship in the package. |
+| `tooling/` | Rust sources for the `mw` binary (`tooling/src`, `tooling/tests`). |
 | `template/` | Embedded deployable workspace that `mw init` materializes. |
 | `docs/` | Engineering documentation. |
 | `.github/` | CI and community files. |
 
-There is no `workspace.yaml` at the repository root. The development project is intentionally separate from a deployed company workspace.
+There is a `Cargo.toml` but no `workspace.yaml` at the repository root. The development project is intentionally separate from a deployed company workspace. Run all `cargo` commands from the repository root.
 
 ## Prerequisites
 
-- Rust toolchain (stable). See `tooling/rust-toolchain.toml` for the pinned channel.
+- Rust toolchain (stable). See `rust-toolchain.toml` for the pinned channel; the minimum supported version is in `Cargo.toml` (`rust-version`).
 - `cargo` available on `PATH`.
 - Git.
 
@@ -23,10 +24,9 @@ Node and Python are not required for the base build. They are only needed when t
 
 ## Development workflow
 
-All changes must pass the standard gate before being committed:
+All changes must pass the standard gate before being committed (run from the repository root):
 
 ```bash
-cd tooling
 cargo fmt --check
 cargo clippy --all-targets -- -D warnings
 cargo test
@@ -35,14 +35,12 @@ cargo test
 Fix formatting automatically:
 
 ```bash
-cd tooling
 cargo fmt
 ```
 
 ### Running against the embedded template
 
 ```bash
-cd tooling
 cargo build
 MW=$PWD/target/debug/mw
 D=$(mktemp -d)
@@ -56,10 +54,10 @@ This project uses all four Rust test layers:
 
 | Layer | Location | What it covers |
 |---|---|---|
-| Unit (white-box) | `#[cfg(test)]` in `src/**` | parsing helpers, policy engine, line-based YAML edits |
-| CLI definition | `src/cli.rs` debug assert | clap wiring is valid |
-| Integration (black-box) | `tests/cli.rs` | binary driven via `std::process::Command` against a temp fixture |
-| Doc tests | `///` examples in `src/workspace.rs` | public helpers stay correct |
+| Unit (white-box) | `#[cfg(test)]` in `tooling/src/**` | parsing helpers, policy engine, line-based YAML edits |
+| CLI definition | `tooling/src/cli.rs` debug assert | clap wiring is valid |
+| Integration (black-box) | `tooling/tests/cli.rs` | binary driven via `std::process::Command` against a temp fixture |
+| Doc tests | `///` examples in `tooling/src/workspace.rs` | public helpers stay correct |
 
 **Write a failing test first, then implement.** TDD is the development convention for this project.
 
@@ -85,7 +83,7 @@ Do not add test dependencies (`assert_cmd`, `predicates`, etc.). The integration
 Changes to `template/` are embedded into the binary at build time via `include_dir!`. When modifying template files:
 
 1. Edit the file under `template/`.
-2. Rebuild the binary: `cd tooling && cargo build`.
+2. Rebuild the binary from the repository root: `cargo build`.
 3. Verify: `mw init` in a temp directory, then `mw doctor`.
 
 ## Adding a new `mw` command

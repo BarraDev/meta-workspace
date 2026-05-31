@@ -10,6 +10,10 @@ maintain a workspace, never to *use* one.
 - language: Rust, single static binary, zero runtime dependency
 - contract: [`docs/workspace-contract.md`](../docs/workspace-contract.md)
 
+> The crate manifest is at the **repository root** (`../Cargo.toml`); the Rust
+> sources live here under `tooling/src` via explicit target paths. Run all
+> `cargo` commands from the repository root.
+
 ## Build
 
 ```bash
@@ -17,16 +21,20 @@ cargo build --release   # produces target/release/mw
 cargo test
 ```
 
-## Install from a checkout
-
-From the repository root:
+## Install
 
 ```bash
-cargo install --path tooling --locked --force
+# From Git (no clone needed — manifest is at the repo root):
+cargo install --git https://github.com/BarraDev/meta-workspace --locked --force
+
+# Or from a local checkout:
+cargo install --path . --locked --force
+
 mw --version
 ```
 
-Use this path for early authorized installs. Official binary releases should be added later with `cargo-dist`.
+Tagged binary releases are published by `.github/workflows/release.yml` on `v*`
+tags; `cargo-dist` is the planned upgrade for richer installers.
 
 ## Testing
 
@@ -35,10 +43,10 @@ can be tested every way Rust supports:
 
 | Layer | Location | What it covers |
 |-------|----------|----------------|
-| Unit (white-box) | `#[cfg(test)]` in `src/**` | parsing helpers, policy brain, line-based YAML edits |
-| CLI definition | `src/cli.rs` (`debug_assert`) | clap arg/subcommand wiring is valid |
-| Integration (black-box) | `tests/cli.rs` | runs the compiled binary against a temp fixture workspace, asserts stdout + exit codes |
-| Doc tests | `///` examples in `src/workspace.rs` | documented public helpers stay correct |
+| Unit (white-box) | `#[cfg(test)]` in `tooling/src/**` | parsing helpers, policy brain, line-based YAML edits |
+| CLI definition | `tooling/src/cli.rs` (`debug_assert`) | clap arg/subcommand wiring is valid |
+| Integration (black-box) | `tooling/tests/cli.rs` | runs the compiled binary against a temp fixture workspace, asserts stdout + exit codes |
+| Doc tests | `///` examples in `tooling/src/workspace.rs` | documented public helpers stay correct |
 
 Run them all, plus the lint/format gates:
 

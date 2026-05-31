@@ -17,4 +17,7 @@ enforce_worktree:
 draft_only_pr:
   enabled: true
   action: deny
+  # When true, PR publish events are allowed only if the user authorizes them
+  # out-of-band by setting MW_USER_APPROVED=1 in the environment. Approval is
+  # never read from the tool event payload, so an agent cannot self-approve.
   require_explicit_user_approval: true

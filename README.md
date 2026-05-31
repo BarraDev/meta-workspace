@@ -59,12 +59,13 @@ Application repositories can still have their own `AGENTS.md` or tool-specific i
 
 | Path | Role |
 |---|---|
-| [`tooling/`](tooling/) | Rust crate `meta-workspace`; installs the `mw` binary. |
+| [`Cargo.toml`](Cargo.toml) | Crate manifest `meta-workspace` (at the root so the embedded `template/` ships in the package); target paths point at `tooling/src`. |
+| [`tooling/`](tooling/) | Rust sources for the `mw` binary (`tooling/src`, `tooling/tests`). |
 | [`template/`](template/) | The embedded deployable workspace that `mw init` materializes. |
 | [`docs/`](docs/) | Engineering docs, including the workspace contract and distribution notes. |
-| [`.github/`](.github/) | CI for formatting, clippy, and tests. |
+| [`.github/`](.github/) | CI (fmt, clippy, tests, MSRV, audit) and the tagged release workflow. |
 
-The repository root intentionally has no `workspace.yaml`. That prevents the development project from being confused with a deployed company workspace.
+The repository root has a `Cargo.toml` but intentionally no `workspace.yaml`. That prevents the development project from being confused with a deployed company workspace.
 
 ## What `mw` does
 
@@ -127,10 +128,9 @@ The base workspace should be boring and dependable.
 
 This keeps new workspaces usable even before any optional tooling is installed.
 
-## Development workflow
+All `cargo` commands run from the repository root (the manifest is there):
 
 ```bash
-cd tooling
 cargo fmt --check
 cargo clippy --all-targets -- -D warnings
 cargo test
@@ -139,7 +139,6 @@ cargo test
 Exercise the embedded template:
 
 ```bash
-cd tooling
 cargo build
 MW=$PWD/target/debug/mw
 D=$(mktemp -d)
@@ -157,12 +156,11 @@ Completed:
 - Phase 2: Rust `mw` crate scaffold, CLI surface, CI, and core commands.
 - Phase 3: full parity with retired interim bash/python scripts.
 - Phase 3 verification: fixed `mw links` so it reconciles all compatibility links, not only top-level agent files.
-- Phase 4 started: policy file, `mw policy check` policy loading, protected-path denial, worktree warnings, draft-only PR publish checks, Claude PreToolUse hook, Pi extension adapter, and Codex/Gemini advisory references.
+- Phase 4: policy engine (`mw policy check`) with protected-path denial, worktree warnings, and draft-only PR gating via the out-of-band `MW_USER_APPROVED` signal; Claude PreToolUse hook, Pi extension adapter, Codex/Gemini advisory references.
+- Phase 4 release: crate manifest relocated to the repository root so the embedded template ships in the package (installable via `cargo install --git`/`--path`, publishable to crates.io); tagged binary releases via `release.yml`; CI extended with an MSRV job and `cargo-deny` supply-chain audit.
 
 Remaining:
 
-- complete release automation;
-- decide when/if to publish the crate to crates.io;
+- decide when/if to publish the crate to crates.io and add `cargo-dist` for richer installers;
 - expand policy evaluation as new harness event shapes are observed;
-- improve docs and examples for real users;
-- review installation, update, and troubleshooting flows.
+- add more worked examples for real users.

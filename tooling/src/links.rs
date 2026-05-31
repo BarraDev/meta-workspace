@@ -147,14 +147,43 @@ fn make_symlink(target: &str, link: &Path) -> anyhow::Result<()> {
 
 #[cfg(windows)]
 fn make_symlink(target: &str, link: &Path) -> anyhow::Result<()> {
-    // Windows file symlinks require privilege; fall back to a regular copy so a
-    // deployed workspace still has working AGENTS/CLAUDE/GEMINI files.
+    use std::os::windows::fs::{symlink_dir, symlink_file};
+
+    // The stored target is relative to the link's own directory (matching the
+    // Unix symlink). Resolve it once to decide dir vs file and to drive the
+    // copy fallback for file links.
     let resolved = link
         .parent()
         .map(|p| p.join(target))
         .unwrap_or_else(|| std::path::PathBuf::from(target));
-    std::fs::copy(&resolved, link)?;
-    Ok(())
+    let target_is_dir = resolved.is_dir();
+
+    let result = if target_is_dir {
+        symlink_dir(target, link)
+    } else {
+        symlink_file(target, link)
+    };
+
+    match result {
+        Ok(()) => Ok(()),
+        // Windows symlink creation needs Developer Mode or elevation. For file
+        // links (AGENTS/CLAUDE/GEMINI) a copy still yields a working file; for
+        // directory links a copy is not a meaningful substitute, so surface a
+        // clear, actionable error instead of the old silent `fs::copy` failure.
+        Err(err) if target_is_dir => Err(anyhow::anyhow!(
+            "could not create directory symlink {} -> {target}: {err}. \
+             Enable Windows Developer Mode (or run elevated) so `mw` can create symlinks.",
+            link.display()
+        )),
+        Err(err) => std::fs::copy(&resolved, link)
+            .map(|_| ())
+            .map_err(|copy_err| {
+                anyhow::anyhow!(
+                    "could not symlink {} -> {target} ({err}); copy fallback also failed: {copy_err}",
+                    link.display()
+                )
+            }),
+    }
 }
 
 #[cfg(all(test, unix))]
