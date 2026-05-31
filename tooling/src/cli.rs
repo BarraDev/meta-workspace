@@ -143,14 +143,28 @@ pub enum SddAction {
 
 #[derive(Debug, Args)]
 pub struct SddInstallArgs {
+    /// Agent target set for cc-sdd.
+    #[arg(long, value_enum, default_value = "claude")]
+    pub targets: SddTargets,
     /// Install mode: staged review (default) or direct write.
     #[arg(long, value_enum, default_value = "staged")]
     pub mode: SddMode,
     /// Memory document policy: vendor (preserve symlink) or replace.
     #[arg(long, value_enum, default_value = "vendor")]
     pub memory_policy: SddMemoryPolicy,
+    /// Run the cc-sdd dry run and stop without applying.
+    #[arg(long)]
+    pub dry_run_only: bool,
     #[command(flatten)]
     pub common: CommonFlags,
+}
+
+#[derive(Debug, Clone, Copy, clap::ValueEnum)]
+pub enum SddTargets {
+    Claude,
+    Codex,
+    Gemini,
+    All,
 }
 
 #[derive(Debug, Clone, Copy, clap::ValueEnum)]

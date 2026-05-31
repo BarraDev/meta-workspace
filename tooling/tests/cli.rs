@@ -325,3 +325,46 @@ fn migrate_is_noop_at_current_version() {
     assert!(stdout(&out).contains("already at schemaVersion 1"));
     std::fs::remove_dir_all(&root).ok();
 }
+
+#[test]
+fn sdd_rejects_staged_replace_combo() {
+    let root = fixture();
+    let out = run(
+        &root,
+        &[
+            "sdd",
+            "install",
+            "--mode",
+            "staged",
+            "--memory-policy",
+            "replace",
+        ],
+        "",
+    );
+    assert!(!out.status.success());
+    std::fs::remove_dir_all(&root).ok();
+}
+
+#[test]
+fn sdd_dry_run_spawns_nothing_and_writes_nothing() {
+    let root = fixture();
+    let before = std::fs::read_to_string(root.join("workspace.yaml")).unwrap();
+    let out = run(&root, &["sdd", "install", "--dry-run"], "");
+    assert!(out.status.success(), "{}", stdout(&out));
+    assert!(stdout(&out).contains("[dry-run]"));
+    assert_eq!(
+        std::fs::read_to_string(root.join("workspace.yaml")).unwrap(),
+        before
+    );
+    assert!(!root.join(".sdd/manifest.json").exists());
+    std::fs::remove_dir_all(&root).ok();
+}
+
+#[test]
+fn sdd_status_without_manifest() {
+    let root = fixture();
+    let out = run(&root, &["sdd", "status"], "");
+    assert!(out.status.success());
+    assert!(stdout(&out).contains("no .sdd/manifest.json"));
+    std::fs::remove_dir_all(&root).ok();
+}

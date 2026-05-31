@@ -13,6 +13,7 @@ pub mod commands;
 pub mod embed;
 pub mod links;
 pub mod registry;
+pub mod sdd;
 pub mod workspace;
 
 use cli::{Cli, Command};
