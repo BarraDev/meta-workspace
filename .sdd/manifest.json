@@ -1,0 +1,12 @@
+{
+  "enabled": false,
+  "provider": "cc-sdd",
+  "version": null,
+  "installed_at": null,
+  "selected_target": null,
+  "installed_agents": [],
+  "install_mode": "staged",
+  "memory_policy": "vendor",
+  "generated_memory_document": ".agents/vendor/cc-sdd/CLAUDE.md",
+  "kiro_dir": ".kiro"
+}

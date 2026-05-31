@@ -1,0 +1,44 @@
+workspace:
+  name: meta-workspace
+  type: company-meta-workspace
+  company_id: null
+  company_name: null
+
+paths:
+  repos: ../repos
+  worktrees: ../worktrees
+  scratch: ../scratch
+  archives: ../archives
+  logs: ../logs
+
+agent_support:
+  canonical_root: .agents
+  instruction_file: .agents/AGENTS.md
+  symlink_compatibility: true
+  tools:
+    claude: true
+    pi: true
+    codex: true
+    gemini: true
+
+sdd:
+  enabled: false
+  provider: cc-sdd
+  kiro_dir: .kiro
+  install_mode: staged # staged | direct
+  memory_policy: vendor # vendor | replace
+  generated_memory_document: .agents/vendor/cc-sdd/CLAUDE.md
+  installed_agents: []
+
+memory:
+  profile: none # none | mempalace | prism | full
+  mempalace:
+    enabled: false
+    wing: null
+  prism:
+    enabled: false
+    project: null
+
+pr_work:
+  default_mode: draft_only
+  post_comments: only_after_user_confirmation

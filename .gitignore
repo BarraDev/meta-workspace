@@ -1,0 +1,34 @@
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+*.local
+secrets/
+
+# Runtime/cache
+.cache/
+.tmp/
+tmp/
+logs/
+*.log
+
+# Agent/runtime output
+.pi/side-agents/runtime/
+.claude/.cache/
+.codex/sessions/
+HANDOFF.md
+
+# Dependency/vendor folders
+node_modules/
+.venv/
+venv/
+
+# OS/editor
+.DS_Store
+.idea/
+.vscode/
+
+# Optional generated backups
+*.bak
+*.backup
+.cc-sdd-backup*/

@@ -1,0 +1,16 @@
+projects: []
+
+# Example:
+# projects:
+#   - id: api
+#     name: API
+#     company: your-company
+#     repository:
+#       url: git@github.com:example/api.git
+#       main_path: ../repos/api
+#       default_branch: main
+#     worktrees:
+#       root: ../worktrees
+#       naming: api-{task-or-branch}
+#     language: go
+#     instructions: docs/instructions/api.md

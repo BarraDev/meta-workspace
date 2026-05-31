@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "prism-mcp": {
+      "enabled": false,
+      "command": "npx",
+      "args": ["-y", "prism-mcp-server"]
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "skills": [
+    ".pi/skills",
+    ".agents/skills"
+  ]
+}
