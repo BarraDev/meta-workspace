@@ -12,7 +12,8 @@ pub struct LinkSpec {
     pub target: &'static str,
 }
 
-/// The agent instruction symlinks every workspace carries.
+/// The agent instruction symlinks every workspace carries (subset of
+/// [`COMPAT_LINKS`]).
 pub const AGENT_LINKS: &[LinkSpec] = &[
     LinkSpec {
         name: "AGENTS.md",
@@ -25,6 +26,45 @@ pub const AGENT_LINKS: &[LinkSpec] = &[
     LinkSpec {
         name: "GEMINI.md",
         target: ".agents/AGENTS.md",
+    },
+];
+
+/// Every compatibility symlink a deployed workspace carries: the three agent
+/// instruction files plus the harness skill/command/agent links that share the
+/// canonical `.agents/` content. Used by `mw init` to recreate symlinks after
+/// materializing the template.
+pub const COMPAT_LINKS: &[LinkSpec] = &[
+    LinkSpec {
+        name: "AGENTS.md",
+        target: ".agents/AGENTS.md",
+    },
+    LinkSpec {
+        name: "CLAUDE.md",
+        target: ".agents/AGENTS.md",
+    },
+    LinkSpec {
+        name: "GEMINI.md",
+        target: ".agents/AGENTS.md",
+    },
+    LinkSpec {
+        name: ".claude/agents",
+        target: "../.agents/agents",
+    },
+    LinkSpec {
+        name: ".claude/commands",
+        target: "../.agents/commands",
+    },
+    LinkSpec {
+        name: ".claude/skills",
+        target: "../.agents/skills",
+    },
+    LinkSpec {
+        name: ".pi/agents",
+        target: "../.agents/agents",
+    },
+    LinkSpec {
+        name: ".pi/skills",
+        target: "../.agents/skills",
     },
 ];
 
@@ -91,6 +131,9 @@ pub fn ensure_link(
     // Missing -> create.
     if dry_run {
         return Ok(LinkStatus::WouldCreate);
+    }
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)?;
     }
     make_symlink(spec.target, &path)?;
     Ok(LinkStatus::Created)

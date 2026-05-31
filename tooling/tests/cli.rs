@@ -198,6 +198,75 @@ fn links_conflict_needs_force() {
     std::fs::remove_dir_all(&root).ok();
 }
 
+#[cfg(unix)]
+#[test]
+fn init_materializes_a_working_workspace() {
+    // start from an empty directory, not a pre-built fixture
+    let root = std::env::temp_dir().join(format!(
+        "mw-init-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+    std::fs::create_dir_all(&root).unwrap();
+
+    let out = run(
+        &root,
+        &["init", "--company-id", "acme", "--company-name", "Acme Inc"],
+        "",
+    );
+    assert!(out.status.success(), "{}", stdout(&out));
+
+    // workspace.yaml materialized and company stamped
+    let yaml = std::fs::read_to_string(root.join("workspace.yaml")).unwrap();
+    assert!(yaml.contains("company_id: acme"), "{yaml}");
+    assert!(yaml.contains("company_name: Acme Inc"));
+
+    // canonical content present
+    assert!(root.join(".agents/AGENTS.md").is_file());
+    assert!(root.join("projects/registry.yaml").is_file());
+
+    // compat symlinks recreated (top-level and nested)
+    assert_eq!(
+        std::fs::read_link(root.join("AGENTS.md"))
+            .unwrap()
+            .to_string_lossy(),
+        ".agents/AGENTS.md"
+    );
+    assert_eq!(
+        std::fs::read_link(root.join(".claude/skills"))
+            .unwrap()
+            .to_string_lossy(),
+        "../.agents/skills"
+    );
+
+    // the materialized workspace passes its own doctor
+    let d = run(&root, &["doctor"], "");
+    assert!(d.status.success(), "doctor failed: {}", stdout(&d));
+    assert!(stdout(&d).contains("0 error(s)"));
+
+    std::fs::remove_dir_all(&root).ok();
+}
+
+#[test]
+fn init_dry_run_writes_nothing() {
+    let root = std::env::temp_dir().join(format!(
+        "mw-init-dry-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+    std::fs::create_dir_all(&root).unwrap();
+    let out = run(&root, &["init", "--dry-run"], "");
+    assert!(out.status.success());
+    assert!(!root.join("workspace.yaml").exists());
+    std::fs::remove_dir_all(&root).ok();
+}
+
 #[test]
 fn add_project_requires_id() {
     let root = fixture();

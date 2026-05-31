@@ -1,27 +1,62 @@
-//! `mw init` — materialize or repair a workspace from the content template.
+//! `mw init` — materialize or repair a workspace from the embedded template.
+//!
+//! Writes the embedded `template/` tree (skipping compat-link paths), stamps
+//! company fields into `workspace.yaml`, and recreates the agent/harness
+//! symlinks. Existing files are preserved, so `init` doubles as a repair.
+
+use std::path::PathBuf;
 
 use crate::cli::InitArgs;
+use crate::links::{ensure_link, LinkStatus, COMPAT_LINKS};
+use crate::{embed, workspace};
 
 pub fn run(args: InitArgs) -> anyhow::Result<()> {
-    let target = args.path.clone().unwrap_or_else(|| ".".to_string());
+    let root = PathBuf::from(args.path.clone().unwrap_or_else(|| ".".to_string()));
+    if !args.common.dry_run {
+        std::fs::create_dir_all(&root)?;
+    }
+    println!("init: target = {}", root.display());
+
+    // 1. Materialize files, skipping the compat-link paths (recreated below).
+    let files = embed::files();
+    let skip: Vec<&str> = COMPAT_LINKS.iter().map(|l| l.name).collect();
+    let summary = embed::materialize(&files, &root, &skip, args.common.dry_run)?;
+    println!(
+        "init: {} file(s) created, {} preserved",
+        summary.created.len(),
+        summary.skipped.len()
+    );
+
+    // 2. Stamp company fields into workspace.yaml (if provided and present).
+    if !args.common.dry_run && (args.company_id.is_some() || args.company_name.is_some()) {
+        stamp_company(&root, &args)?;
+    }
+
+    // 3. Recreate compatibility symlinks.
+    for spec in COMPAT_LINKS {
+        let status = ensure_link(&root, spec, false, args.common.dry_run)?;
+        if matches!(status, LinkStatus::Conflict) {
+            println!("  link conflict (kept): {} (exists, not a link)", spec.name);
+        }
+    }
 
     if args.common.dry_run {
-        println!("[dry-run] would initialize meta-workspace at {target}");
+        println!("[dry-run] no changes were written");
     } else {
-        println!("init: target = {target}");
+        println!("init: workspace ready at {}", root.display());
     }
+    Ok(())
+}
+
+fn stamp_company(root: &std::path::Path, args: &InitArgs) -> anyhow::Result<()> {
+    let wf = root.join(workspace::WORKSPACE_FILE);
+    let mut yaml = std::fs::read_to_string(&wf)?;
     if let Some(id) = &args.company_id {
-        println!("init: company_id = {id}");
+        yaml = workspace::set_scalar(&yaml, "company_id", id)?;
     }
     if let Some(name) = &args.company_name {
-        println!("init: company_name = {name}");
+        yaml = workspace::set_scalar(&yaml, "company_name", name)?;
     }
-
-    // TODO(phase 3): materialize the content template, stamp company_* into
-    // workspace.yaml via token substitution, create parent-sibling dirs
-    // (../repos, ../worktrees, ../scratch, ../archives, ../logs), then call
-    // links to generate symlinks and harness adapters. Supersedes
-    // scripts/bootstrap.sh + scripts/install-agent-links.sh.
-    println!("init: not yet implemented (interim: scripts/bootstrap.sh)");
+    std::fs::write(&wf, yaml)?;
     Ok(())
 }

@@ -44,10 +44,10 @@ via `std::process::Command` and `CARGO_BIN_EXE_mw`.
 
 | Command | Status | Notes |
 |---------|--------|-------|
-| `mw init` | stub | materialize/repair a workspace (interim: `scripts/bootstrap.sh`) |
+| `mw init` | working | materialize/repair a workspace from the embedded template |
 | `mw doctor` | working | validate the workspace against the contract |
-| `mw links` | stub | symlinks + harness adapters (interim: `scripts/install-agent-links.sh`) |
-| `mw add-project` | stub | append to `projects/registry.yaml` (interim: `scripts/new-project.sh`) |
+| `mw links` | working | reconcile compat symlinks (interim: `scripts/install-agent-links.sh`) |
+| `mw add-project` | working | append to `projects/registry.yaml` (interim: `scripts/new-project.sh`) |
 | `mw memory` | working | read/set the memory profile (`none\|mempalace\|prism\|full`) |
 | `mw sdd` | partial | `status` works; install/update stub (interim: `scripts/install-sdd.sh`) |
 | `mw hook session-start` | working | non-blocking warm-up (interim: `scripts/session-start.sh`) |
