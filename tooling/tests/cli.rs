@@ -166,6 +166,38 @@ fn hook_session_start_is_non_blocking() {
     std::fs::remove_dir_all(&root).ok();
 }
 
+#[cfg(unix)]
+#[test]
+fn links_recreates_missing_symlinks() {
+    let root = fixture();
+    // remove the compat symlinks the fixture created
+    for l in ["AGENTS.md", "CLAUDE.md", "GEMINI.md"] {
+        std::fs::remove_file(root.join(l)).unwrap();
+    }
+    let out = run(&root, &["links"], "");
+    assert!(out.status.success(), "{}", stdout(&out));
+    for l in ["AGENTS.md", "CLAUDE.md", "GEMINI.md"] {
+        let t = std::fs::read_link(root.join(l)).unwrap();
+        assert_eq!(t.to_string_lossy(), ".agents/AGENTS.md");
+    }
+    std::fs::remove_dir_all(&root).ok();
+}
+
+#[cfg(unix)]
+#[test]
+fn links_conflict_needs_force() {
+    let root = fixture();
+    std::fs::remove_file(root.join("CLAUDE.md")).unwrap();
+    std::fs::write(root.join("CLAUDE.md"), "hand-written\n").unwrap();
+    // without --force the conflict fails the command
+    assert!(!run(&root, &["links"], "").status.success());
+    assert!(root.join("CLAUDE.md").is_file());
+    // with --force it is replaced by the symlink
+    assert!(run(&root, &["links", "--force"], "").status.success());
+    assert!(std::fs::read_link(root.join("CLAUDE.md")).is_ok());
+    std::fs::remove_dir_all(&root).ok();
+}
+
 #[test]
 fn add_project_requires_id() {
     let root = fixture();
