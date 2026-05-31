@@ -18,6 +18,9 @@ logs/
 .codex/sessions/
 HANDOFF.md
 
+# Rust tooling build artifacts (Cargo.lock IS committed for the binary crate)
+tooling/target/
+
 # Dependency/vendor folders
 node_modules/
 .venv/

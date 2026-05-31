@@ -1,0 +1,33 @@
+[package]
+name = "meta-workspace"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.74"
+description = "mw — maintenance CLI for the generic one-company-at-a-time meta-workspace template."
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/your-org/meta-workspace"
+readme = "README.md"
+keywords = ["workspace", "agents", "cli", "monorepo", "tooling"]
+categories = ["command-line-utilities", "development-tools"]
+
+# The crate is published as `meta-workspace`; the installed binary is `mw`.
+# A thin lib target enables doc tests and library-level integration tests.
+[lib]
+name = "meta_workspace"
+path = "src/lib.rs"
+
+[[bin]]
+name = "mw"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1"
+clap = { version = "4", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[profile.release]
+strip = true
+lto = true
+codegen-units = 1
+panic = "abort"
