@@ -4,8 +4,6 @@ A reusable **one-company-at-a-time meta-workspace** for coordinating repositorie
 
 This repository is the **development project** for the template and its maintenance CLI. It is not itself a deployed workspace. The deployable workspace lives in [`template/`](template/), and the Rust maintenance tool lives in [`tooling/`](tooling/).
 
-> Current status: private BarraDev incubation. The project should stay private until the template, release process, documentation, and policy adapters are polished enough to share publicly.
-
 ## Why this exists
 
 Modern engineering work often spans many repositories and many AI coding tools. Each tool wants its own instruction files, skills, commands, hooks, memory setup, and workflow conventions. If those files are copied into every application repository, they drift quickly and become hard to maintain.
@@ -161,26 +159,10 @@ Completed:
 - Phase 3 verification: fixed `mw links` so it reconciles all compatibility links, not only top-level agent files.
 - Phase 4 started: policy file, `mw policy check` policy loading, Claude PreToolUse hook, Pi extension adapter, and Codex/Gemini advisory references.
 
-Remaining before public release:
+Remaining:
 
-- finalize the private BarraDev repository setup;
-- complete release automation with `cargo-dist`;
+- complete release automation;
 - decide when/if to publish the crate to crates.io;
 - harden policy evaluation beyond protected paths;
 - improve docs and examples for real users;
-- review security posture before making the repository public.
-
-## Public-release standard
-
-This project should not become public just because it works locally. It should become public when it is useful, understandable, and safe for someone else to adopt.
-
-Before that, the README, install path, release artifacts, examples, and policy story should all be clear enough that a new user understands:
-
-1. what problem this solves;
-2. why it is separate from application repositories;
-3. how to create a workspace;
-4. what dependencies are optional;
-5. what each supported agent harness can and cannot enforce;
-6. how to update, validate, and troubleshoot the workspace.
-
-Until then, private incubation is the right choice.
+- review installation, update, and troubleshooting flows.
