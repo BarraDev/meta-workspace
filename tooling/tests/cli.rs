@@ -175,6 +175,48 @@ fn add_project_requires_id() {
 }
 
 #[test]
+fn add_project_appends_entry_and_rejects_duplicate() {
+    let root = fixture();
+    let reg = root.join("projects/registry.yaml");
+
+    // dry-run must not write
+    run(
+        &root,
+        &["add-project", "--id", "api", "--name", "API", "--dry-run"],
+        "",
+    );
+    assert!(!std::fs::read_to_string(&reg).unwrap().contains("- id: api"));
+
+    // real add
+    let out = run(
+        &root,
+        &[
+            "add-project",
+            "--id",
+            "api",
+            "--name",
+            "API",
+            "--repo-url",
+            "git@github.com:example/api.git",
+        ],
+        "",
+    );
+    assert!(out.status.success(), "{}", stdout(&out));
+    let yaml = std::fs::read_to_string(&reg).unwrap();
+    assert!(yaml.contains("- id: api"));
+    assert!(yaml.contains("url: git@github.com:example/api.git"));
+    assert!(yaml.contains("main_path: ../repos/api"));
+
+    // duplicate id fails and does not double-write
+    let out = run(&root, &["add-project", "--id", "api"], "");
+    assert!(!out.status.success());
+    let yaml = std::fs::read_to_string(&reg).unwrap();
+    assert_eq!(yaml.matches("- id: api").count(), 1);
+
+    std::fs::remove_dir_all(&root).ok();
+}
+
+#[test]
 fn migrate_is_noop_at_current_version() {
     let root = fixture();
     let out = run(&root, &["migrate"], "");
