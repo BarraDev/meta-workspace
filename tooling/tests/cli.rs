@@ -170,7 +170,8 @@ fn hook_session_start_is_non_blocking() {
 #[test]
 fn links_recreates_missing_symlinks() {
     let root = fixture();
-    // remove the compat symlinks the fixture created
+    // remove the compat symlinks the fixture created; nested harness links are
+    // absent from the fixture and should be created, including parent dirs.
     for l in ["AGENTS.md", "CLAUDE.md", "GEMINI.md"] {
         std::fs::remove_file(root.join(l)).unwrap();
     }
@@ -179,6 +180,16 @@ fn links_recreates_missing_symlinks() {
     for l in ["AGENTS.md", "CLAUDE.md", "GEMINI.md"] {
         let t = std::fs::read_link(root.join(l)).unwrap();
         assert_eq!(t.to_string_lossy(), ".agents/AGENTS.md");
+    }
+    for (link, target) in [
+        (".claude/agents", "../.agents/agents"),
+        (".claude/commands", "../.agents/commands"),
+        (".claude/skills", "../.agents/skills"),
+        (".pi/agents", "../.agents/agents"),
+        (".pi/skills", "../.agents/skills"),
+    ] {
+        let t = std::fs::read_link(root.join(link)).unwrap();
+        assert_eq!(t.to_string_lossy(), target);
     }
     std::fs::remove_dir_all(&root).ok();
 }

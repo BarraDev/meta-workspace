@@ -66,6 +66,7 @@ SDD/Kiro workflow is optional. When enabled, use `cc-sdd` as the source of SDD s
 
 ## Safety
 
+- Follow `.agents/policies.yaml` as the harness-neutral workspace policy file.
 - Ask before destructive changes.
 - Do not store secrets in repository files.
 - Avoid mining huge folders or private data without explicit scope.

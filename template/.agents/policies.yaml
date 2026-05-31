@@ -1,0 +1,20 @@
+# Harness-neutral policy file for `mw policy check`.
+# Programmatic deny is supported by Claude and Pi adapters. Codex and Gemini
+# consume these policies as instructions/advisory guidance.
+version: 1
+
+protect_paths:
+  enabled: true
+  deny_write:
+    - .env
+    - .env.*
+    - secrets/
+
+enforce_worktree:
+  enabled: true
+  action: warn # warn | deny
+
+draft_only_pr:
+  enabled: true
+  action: deny
+  require_explicit_user_approval: true

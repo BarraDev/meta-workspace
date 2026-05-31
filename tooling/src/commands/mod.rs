@@ -1,8 +1,7 @@
 //! Command implementations for `mw`.
 //!
-//! Phase 2 ships compiling, contract-shaped stubs. Each command documents the
-//! behavior it will gain when its interim bash+python script is retired
-//! (see docs/workspace-contract.md and the project HANDOFF).
+//! These commands are the source of truth for maintaining a workspace; the
+//! interim bash/python scripts were retired after parity was reached.
 
 pub mod add_project;
 pub mod doctor;

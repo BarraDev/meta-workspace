@@ -1,4 +1,7 @@
 personality = "friendly"
 
+# Codex has no project-local hook equivalent for programmatic deny here.
+# Keep sandbox/approval settings conservative and follow `.agents/policies.yaml`
+# as advisory policy. Claude and Pi enforce the same file via `mw policy check`.
 # Optional MCP servers can be configured by the user or via `mw memory`.
 # Do not store secrets here.

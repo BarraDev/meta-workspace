@@ -26,9 +26,8 @@ pub fn run(args: MigrateArgs) -> anyhow::Result<()> {
     }
 
     println!("migrate: {current} -> {target}");
-    // TODO(phase 3): apply ordered, idempotent step migrations (1->2, 2->3, ...)
-    // as new schema versions are introduced. With only version 1 today there is
-    // nothing to apply.
+    // Future schema versions will add ordered, idempotent step migrations
+    // (1->2, 2->3, ...). With only version 1 today there is nothing to apply.
     if args.common.dry_run {
         println!("[dry-run] no changes will be written");
     }

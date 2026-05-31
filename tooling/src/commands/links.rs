@@ -1,11 +1,10 @@
 //! `mw links` — create or repair agent compatibility symlinks.
 //!
-//! Reconciles AGENTS.md / CLAUDE.md / GEMINI.md -> .agents/AGENTS.md. Harness
-//! enforcement adapters (Claude hooks, Pi extension, Codex config, Gemini
-//! instructions) are generated separately once .agents/policies.yaml exists.
+//! Reconciles all workspace compatibility links, including top-level agent
+//! instruction files and harness skill/command/agent directories.
 
 use crate::cli::LinksArgs;
-use crate::links::{ensure_link, LinkStatus, AGENT_LINKS};
+use crate::links::{ensure_link, LinkStatus, COMPAT_LINKS};
 use crate::workspace;
 
 pub fn run(args: LinksArgs) -> anyhow::Result<()> {
@@ -13,7 +12,7 @@ pub fn run(args: LinksArgs) -> anyhow::Result<()> {
     println!("links: workspace root = {}", root.display());
 
     let mut conflicts = 0u32;
-    for spec in AGENT_LINKS {
+    for spec in COMPAT_LINKS {
         let status = ensure_link(&root, spec, args.force, args.common.dry_run)?;
         let label = match status {
             LinkStatus::Ok => "ok",
@@ -32,7 +31,5 @@ pub fn run(args: LinksArgs) -> anyhow::Result<()> {
     if conflicts > 0 {
         anyhow::bail!("{conflicts} link conflict(s); re-run with --force to replace");
     }
-    // TODO(phase 3b): generate harness enforcement adapters that shell out to
-    // `mw policy check`, driven by .agents/policies.yaml.
     Ok(())
 }
