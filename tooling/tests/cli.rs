@@ -160,6 +160,50 @@ fn policy_allows_normal_path_and_empty_input() {
 }
 
 #[test]
+fn policy_warns_for_clean_checkout_when_configured() {
+    let root = fixture();
+    std::fs::write(
+        root.join(".agents/policies.yaml"),
+        "enforce_worktree:\n  enabled: true\n  action: warn\n",
+    )
+    .unwrap();
+    let out = run(
+        &root,
+        &["policy", "check"],
+        r#"{"tool_name":"Edit","tool_input":{"file_path":"../repos/api/src/lib.rs"}}"#,
+    );
+    assert!(out.status.success());
+    assert!(stdout(&out).contains("\"decision\":\"warn\""));
+    std::fs::remove_dir_all(&root).ok();
+}
+
+#[test]
+fn policy_denies_pr_publish_without_approval_when_configured() {
+    let root = fixture();
+    std::fs::write(
+        root.join(".agents/policies.yaml"),
+        "draft_only_pr:\n  enabled: true\n  action: deny\n  require_explicit_user_approval: true\n",
+    )
+    .unwrap();
+    let out = run(
+        &root,
+        &["policy", "check"],
+        r#"{"tool_name":"Bash","tool_input":{"command":"gh pr comment 12 --body ready"}}"#,
+    );
+    assert_eq!(out.status.code(), Some(1));
+    assert!(stdout(&out).contains("\"decision\":\"deny\""));
+
+    let out = run(
+        &root,
+        &["policy", "check"],
+        r#"{"tool_name":"Bash","tool_input":{"command":"gh pr review 12 --approve","explicit_user_approval":true}}"#,
+    );
+    assert!(out.status.success());
+    assert!(stdout(&out).contains("\"decision\":\"allow\""));
+    std::fs::remove_dir_all(&root).ok();
+}
+
+#[test]
 fn hook_session_start_is_non_blocking() {
     let root = fixture();
     assert!(run(&root, &["hook", "session-start"], "").status.success());

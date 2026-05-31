@@ -157,12 +157,12 @@ Completed:
 - Phase 2: Rust `mw` crate scaffold, CLI surface, CI, and core commands.
 - Phase 3: full parity with retired interim bash/python scripts.
 - Phase 3 verification: fixed `mw links` so it reconciles all compatibility links, not only top-level agent files.
-- Phase 4 started: policy file, `mw policy check` policy loading, Claude PreToolUse hook, Pi extension adapter, and Codex/Gemini advisory references.
+- Phase 4 started: policy file, `mw policy check` policy loading, protected-path denial, worktree warnings, draft-only PR publish checks, Claude PreToolUse hook, Pi extension adapter, and Codex/Gemini advisory references.
 
 Remaining:
 
 - complete release automation;
 - decide when/if to publish the crate to crates.io;
-- harden policy evaluation beyond protected paths;
+- expand policy evaluation as new harness event shapes are observed;
 - improve docs and examples for real users;
 - review installation, update, and troubleshooting flows.

@@ -129,8 +129,8 @@ When a harness later gains a real hook engine, only a new adapter generator is a
 Policies live in a neutral file (`.agents/policies.yaml`) and are evaluated by `mw`:
 
 - protect paths: deny writes to `.env`, `secrets/`.
-- enforce worktree: deny/warn editing inside a clean main checkout.
-- draft-only PR: block PR comment/approve/post without an explicit override flag.
+- enforce worktree: deny/warn write tools targeting configured clean checkout paths such as `../repos`, while allowing configured worktree paths such as `../worktrees`.
+- draft-only PR: block PR comment/review/approve/post events without an explicit approval field in the event input (`explicit_user_approval`, `user_approved`, `mw_user_approved`, `approved_by_user`, `posting_allowed`, or `mw_policy.user_approved`).
 - session warm-up: only if mempalace/prism configured.
 
 ### Honest limits
