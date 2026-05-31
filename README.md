@@ -4,7 +4,7 @@ A reusable **one-company-at-a-time meta-workspace** for coordinating repositorie
 
 This repository is the **development project** for the template and its maintenance CLI. It is not itself a deployed workspace. The deployable workspace lives in [`template/`](template/), and the Rust maintenance tool lives in [`tooling/`](tooling/).
 
-> Current status: private Barradev incubation. The project should stay private until the template, release process, documentation, and policy adapters are polished enough to share publicly.
+> Current status: private BarraDev incubation. The project should stay private until the template, release process, documentation, and policy adapters are polished enough to share publicly.
 
 ## Why this exists
 
@@ -163,7 +163,7 @@ Completed:
 
 Remaining before public release:
 
-- finalize the private Barradev repository setup;
+- finalize the private BarraDev repository setup;
 - complete release automation with `cargo-dist`;
 - decide when/if to publish the crate to crates.io;
 - harden policy evaluation beyond protected paths;
