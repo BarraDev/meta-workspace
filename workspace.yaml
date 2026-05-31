@@ -1,8 +1,19 @@
 workspace:
+  schemaVersion: 1
   name: meta-workspace
   type: company-meta-workspace
   company_id: null
   company_name: null
+
+tooling:
+  # The optional `mw` Rust binary maintains this workspace.
+  # Tier 0 (the workspace files) requires no runtime; `mw` is only needed to
+  # create or maintain a workspace. See docs/workspace-contract.md.
+  manager: mw
+  crate: meta-workspace
+  language: rust
+  mode: managed # managed | ejected
+  contract: docs/workspace-contract.md
 
 paths:
   repos: ../repos
@@ -42,3 +53,18 @@ memory:
 pr_work:
   default_mode: draft_only
   post_comments: only_after_user_confirmation
+
+policies:
+  # Harness-neutral enforcement rules evaluated by `mw policy check`.
+  # Real programmatic deny is supported on Claude and Pi; Codex/Gemini are advisory.
+  # See docs/workspace-contract.md (Enforcement engine).
+  enforcement_file: .agents/policies.yaml
+  protect_paths:
+    enabled: true
+    deny_write: [".env", ".env.*", "secrets/"]
+  enforce_worktree:
+    enabled: true
+    action: warn # warn | deny
+  draft_only_pr:
+    enabled: true
+    action: deny # block PR comment/approve/post without explicit override
