@@ -92,4 +92,5 @@ AI coding agents should:
 3. Run `mw init` (it preserves existing files and repairs symlinks).
 4. Keep application repositories in `../repos` and worktrees in `../worktrees` unless the user says otherwise.
 5. Run `mw doctor`.
-6. Report changed files, commands run, and remaining manual steps.
+6. If validating enforcement, run simple `mw policy check` smoke tests for protected paths, worktree paths, and PR posting behavior.
+7. Report changed files, commands run, and remaining manual steps.

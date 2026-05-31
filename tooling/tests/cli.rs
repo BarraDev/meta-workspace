@@ -105,6 +105,54 @@ fn doctor_fails_without_workspace() {
 }
 
 #[test]
+fn doctor_reports_warnings_and_strict_exits_2() {
+    let root = fixture();
+    std::fs::remove_file(root.join("CLAUDE.md")).unwrap();
+
+    let out = run(&root, &["doctor"], "");
+    let s = stdout(&out);
+    assert!(
+        out.status.success(),
+        "warnings must not fail non-strict doctor: {s}"
+    );
+    assert!(
+        s.contains("warn CLAUDE.md is not a symlink"),
+        "missing warning: {s}"
+    );
+    assert!(s.contains("0 error(s)"), "unexpected errors: {s}");
+
+    let out = run(&root, &["doctor", "--strict"], "");
+    let s = stdout(&out);
+    assert_eq!(
+        out.status.code(),
+        Some(2),
+        "strict should fail on warnings: {s}"
+    );
+    assert!(s.contains("warning(s)"), "missing warning summary: {s}");
+    std::fs::remove_dir_all(&root).ok();
+}
+
+#[test]
+fn doctor_reports_schema_errors_with_exit_1() {
+    let root = fixture();
+    std::fs::write(
+        root.join("workspace.yaml"),
+        "workspace:\n  schemaVersion: 999\n  name: fixture\n",
+    )
+    .unwrap();
+
+    let out = run(&root, &["doctor"], "");
+    let s = stdout(&out);
+    assert_eq!(out.status.code(), Some(1), "schema error should fail: {s}");
+    assert!(
+        s.contains("ERR  schemaVersion 999 is newer"),
+        "missing schema error: {s}"
+    );
+    assert!(s.contains("1 error(s)"), "missing error summary: {s}");
+    std::fs::remove_dir_all(&root).ok();
+}
+
+#[test]
 fn memory_read_set_revert_roundtrip() {
     let root = fixture();
     assert!(stdout(&run(&root, &["memory"], "")).contains("profile = none"));

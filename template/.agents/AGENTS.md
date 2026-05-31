@@ -31,11 +31,24 @@ Use English for code, commits, PRs, documentation, project files, and persistent
 
 ## Before working on code
 
-1. Identify the project in `projects/registry.yaml`.
-2. Confirm the repository path and default branch.
-3. Use a worktree for implementation or PR review unless the user explicitly chooses otherwise.
-4. Read project-specific instructions before editing code.
-5. Validate current state with live commands; do not rely only on memory.
+1. Run `mw doctor` when the `mw` binary is available, and report any errors or warnings.
+2. Identify the project in `projects/registry.yaml`.
+3. Confirm the repository path and default branch.
+4. Use a worktree for implementation or PR review unless the user explicitly chooses otherwise.
+5. Read project-specific instructions before editing code.
+6. Validate current state with live commands; do not rely only on memory.
+
+## Maintenance commands
+
+Prefer `mw` commands for workspace maintenance:
+
+- Use `mw doctor` to validate workspace health.
+- Use `mw links` to repair compatibility symlinks.
+- Use `mw add-project` to add registry entries; edit `projects/registry.yaml` manually only for fields not supported by the command.
+- Use `mw memory` for memory profile changes.
+- Use `mw policy check` for policy smoke tests when validating enforcement behavior.
+
+Do not make arbitrary cleanup edits just to prove write access. If the user asks for a safe trial task, prefer read-only validation plus a clear report unless they explicitly approve a file change.
 
 ## PR work
 
