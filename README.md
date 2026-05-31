@@ -1,147 +1,51 @@
-# Generic Meta-Workspace Template
+# meta-workspace
 
-This repository is a **template for creating one company meta-workspace**. It is not an application repository and should not contain application source code.
+This repository is the **development project** for the generic, one-company-at-a-time
+meta-workspace template and its maintenance tool. It is **not** itself a deployed
+workspace — the deployable workspace lives under [`template/`](template/).
 
-Use a meta-workspace to coordinate one company's projects, repositories, worktrees, agent instructions, specs, decisions, memory configuration, and PR workflows.
+## Layout
 
-## What this template provides
+| Path | Role |
+|------|------|
+| [`tooling/`](tooling/) | Rust crate `meta-workspace` → the `mw` binary (the maintenance tool). |
+| [`template/`](template/) | The deployable workspace content (`.agents/`, `workspace.yaml`, scripts, agent-compat symlinks). What `mw init` materializes. |
+| [`docs/`](docs/) | Project engineering docs: the [workspace contract](docs/workspace-contract.md) and [distribution](docs/distribution.md). |
+| `.github/` | CI for the tooling. |
 
-- A reusable one-company-at-a-time workspace structure.
-- Parent sibling folders for repositories and worktrees.
-- Canonical agent instructions under `.agents/`.
-- Compatibility links for Claude, Pi, Gemini, and related agent tools.
-- Optional memory configuration for MemPalace, Prism, or both.
-- Optional SDD/Kiro support installed through `cc-sdd`.
-- Project registry and helper scripts for adding repositories.
-- Draft-only PR workflow guidance for AI agents.
+The repo root is intentionally **not** a workspace: there is no `workspace.yaml`
+at the root, so `mw` only resolves a workspace when run inside `template/` (or a
+real deployed instance). This keeps the project cleanly separated from an
+instance of the thing it produces.
 
-## Recommended layout
+## Two layers (recap)
 
-Create one work root per company or client:
+- **Content layer** — the files in `template/`. Requires no runtime; a user can
+  copy/clone it and use it with any agent harness.
+- **Tooling layer** — the `mw` binary in `tooling/`. Needed only to *create or
+  maintain* a workspace, never to *use* one.
 
-```text
-work-root/
-├── meta-workspace/   # this repository/template instance
-├── repos/            # clean main checkouts
-├── worktrees/        # feature, fix, experiment, or PR worktrees
-├── scratch/          # temporary human/agent workspace
-├── archives/         # old handoffs or exports
-└── logs/             # optional runtime logs
-```
-
-The default paths are intentionally outside the meta-workspace:
-
-- repositories: `../repos`
-- worktrees: `../worktrees`
-- scratch: `../scratch`
-- archives: `../archives`
-- logs: `../logs`
-
-## First run
-
-Interactive setup:
+## Working on the project
 
 ```bash
-./scripts/bootstrap.sh
-./scripts/doctor.sh
+# Tooling (Rust)
+cd tooling
+cargo test                                # unit + integration + doc tests
+cargo clippy --all-targets -- -D warnings
+cargo fmt --check
+
+# Inspect the deployable template as a workspace
+cd ../template
+../tooling/target/debug/mw doctor
 ```
 
-Non-interactive setup example:
+Development follows TDD: write or extend a failing test first, then implement.
+See [`docs/workspace-contract.md`](docs/workspace-contract.md) for the full
+contract the tooling implements.
 
-```bash
-./scripts/bootstrap.sh \
-  --name="Example Company" \
-  --slug="example-company" \
-  --init-git=yes \
-  --create-dirs=yes \
-  --non-interactive
+## Status
 
-./scripts/doctor.sh
-```
-
-## Add projects
-
-Interactive:
-
-```bash
-./scripts/new-project.sh
-```
-
-Non-interactive:
-
-```bash
-./scripts/new-project.sh \
-  --id=api \
-  --name="API" \
-  --repo-url="git@github.com:example/api.git" \
-  --default-branch=main \
-  --language=go \
-  --non-interactive
-```
-
-The helper updates `projects/registry.yaml` and creates a project instruction stub. It does not clone repositories.
-
-## Optional memory
-
-Interactive:
-
-```bash
-./scripts/install-memory.sh
-```
-
-Non-interactive:
-
-```bash
-./scripts/install-memory.sh --profile=mempalace --slug=example-company --non-interactive
-```
-
-Supported profiles:
-
-- `none`
-- `mempalace`
-- `prism`
-- `full`
-
-## Optional SDD/Kiro
-
-Dry run only:
-
-```bash
-./scripts/install-sdd.sh --dry-run-only --targets=claude
-```
-
-Controlled staged install:
-
-```bash
-./scripts/install-sdd.sh --targets=claude
-```
-
-By default, SDD install runs `cc-sdd` in a temporary staging directory and preserves the live `CLAUDE.md` symlink to `.agents/AGENTS.md`. The generated `cc-sdd` memory document is stored at:
-
-```text
-.agents/vendor/cc-sdd/CLAUDE.md
-```
-
-Use direct mode only when you intentionally want `cc-sdd` to write directly into live tool files:
-
-```bash
-./scripts/install-sdd.sh --mode=direct --memory-policy=replace --targets=claude
-```
-
-## Important files
-
-- `workspace.yaml` — workspace paths and optional feature settings.
-- `company/profile.md` — company profile for this workspace instance.
-- `projects/registry.yaml` — project and repository registry.
-- `.agents/AGENTS.md` — canonical AI-agent instructions.
-- `INSTALL.md` — installation and setup guide.
-- `BOOTSTRAP.md` — agent-assisted bootstrap procedure.
-- `docs/distribution.md` — distribution/package options for this template.
-
-## Safety rules
-
-- Do not store secrets in this repository.
-- Do not clone application repositories into this folder.
-- Keep clean main checkouts in `../repos` by default.
-- Use worktrees in `../worktrees` for feature work, fixes, experiments, and PR reviews.
-- AI agents must not post PR comments, approvals, external messages, or status updates without explicit user approval.
+- Phase 1: workspace contract + `schemaVersion`. Done.
+- Phase 2: `mw` crate scaffolded (clap), functional `doctor`/`memory`/`hook`/`policy`/`migrate`, full test matrix. Done.
+- Phase 3: porting the remaining stub commands (`init`, `links`, `add-project`, `sdd install/update`) to real behavior, TDD. In progress.
+- Phase 4: `cargo-dist` release pipeline and crate publication. Planned.

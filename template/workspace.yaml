@@ -8,7 +8,8 @@ workspace:
 tooling:
   # The optional `mw` Rust binary maintains this workspace.
   # Tier 0 (the workspace files) requires no runtime; `mw` is only needed to
-  # create or maintain a workspace. See docs/workspace-contract.md.
+  # create or maintain a workspace. The contract is published with the
+  # meta-workspace project (docs/workspace-contract.md in that repo).
   manager: mw
   crate: meta-workspace
   language: rust

@@ -12,10 +12,13 @@ tmp/
 logs/
 *.log
 
-# Agent/runtime output
+# Agent/runtime output (deployable workspace lives under template/)
 .pi/side-agents/runtime/
+template/.pi/side-agents/runtime/
 .claude/.cache/
+template/.claude/.cache/
 .codex/sessions/
+template/.codex/sessions/
 HANDOFF.md
 
 # Rust tooling build artifacts (Cargo.lock IS committed for the binary crate)
