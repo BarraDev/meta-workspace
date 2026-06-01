@@ -112,7 +112,6 @@ The workspace has a harness-neutral policy file at:
 - `allow`
 - `deny { reason }`
 - `warn { message }`
-- `modify { input }`
 
 Claude and Pi can enforce these decisions programmatically. Codex and Gemini currently consume the same policy as advisory guidance because their local hook capabilities are more limited.
 

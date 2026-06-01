@@ -5,7 +5,7 @@
 //! Claude needs zero translation; other harnesses translate in their thin
 //! adapter (Pi extension, Codex config subset, Gemini instructions).
 //!
-//! Decision is one of: allow | deny{reason} | modify{input} | warn{message}.
+//! Decision is one of: allow | deny{reason} | warn{message}.
 //! The policy file is `.agents/policies.yaml`; parsing stays intentionally
 //! line-based so the CLI does not depend on a YAML runtime.
 
@@ -280,7 +280,8 @@ fn evaluate(event: &Event, policy: &Policy) -> Decision {
 
     if policy.draft_only_pr_enabled
         && is_pr_publish_event(&event.tool_name, &event.tool_input)
-        && (!policy.require_explicit_user_approval || !event.user_approved)
+        && policy.require_explicit_user_approval
+        && !event.user_approved
     {
         return decision_for_effect(
             policy.draft_only_pr_action,
@@ -559,6 +560,27 @@ mod tests {
             ..Default::default()
         };
         assert!(matches!(evaluate(&event, &policy), Decision::Deny { .. }));
+    }
+
+    #[test]
+    fn approval_not_required_allows_pr_publish_without_approval() {
+        // With `require_explicit_user_approval: false` the gate is opt-out:
+        // the draft-only feature is enabled but approval is not demanded, so a
+        // PR-publish event is allowed even though no out-of-band approval was
+        // given. (Regression guard: the flag must loosen the gate, not deny
+        // unconditionally.)
+        let policy = parse_policy(
+            "draft_only_pr:\n  enabled: true\n  action: deny\n  require_explicit_user_approval: false\n",
+        )
+        .unwrap();
+        assert!(!policy.require_explicit_user_approval);
+        let event = Event {
+            tool_name: "Bash".into(),
+            tool_input: serde_json::json!({ "command": "gh pr comment 12 --body 'ready'" }),
+            // No approval signal: still allowed because approval is not required.
+            ..Default::default()
+        };
+        assert!(matches!(evaluate(&event, &policy), Decision::Allow));
     }
 
     #[test]

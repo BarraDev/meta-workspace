@@ -102,7 +102,7 @@ mw policy check
 
 - reads an event as JSON on stdin,
 - returns a decision as JSON on stdout,
-- decision is one of: `allow`, `deny{reason}`, `modify{input}`, `warn{message}`.
+- decision is one of: `allow`, `deny{reason}`, `warn{message}`.
 
 The canonical event JSON shape follows Claude Code's hook payload so Claude needs zero translation; other harnesses translate to/from it in their thin adapter.
 
