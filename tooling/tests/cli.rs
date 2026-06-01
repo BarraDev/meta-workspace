@@ -110,6 +110,9 @@ fn doctor_fails_without_workspace() {
     std::fs::remove_dir_all(&empty).ok();
 }
 
+// Symlink-vs-regular-file detection: the fixture only creates the compat
+// symlinks on Unix, and the warning this asserts is about symlink semantics.
+#[cfg(unix)]
 #[test]
 fn doctor_reports_warnings_and_strict_exits_2() {
     let root = fixture();
