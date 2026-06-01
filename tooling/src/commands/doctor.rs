@@ -7,6 +7,7 @@
 use std::path::Path;
 
 use crate::cli::{DoctorArgs, SCHEMA_VERSION};
+use crate::commands::policy::{self, POLICY_FILE, PolicyFileStatus};
 use crate::links::COMPAT_LINKS;
 use crate::workspace;
 
@@ -49,7 +50,17 @@ pub fn run(args: DoctorArgs) -> anyhow::Result<()> {
     require_file(&root, "projects/registry.yaml", &mut warnings);
     require_file(&root, "company/profile.md", &mut warnings);
 
-    // 5. parent-sibling working dirs (informational)
+    // 5. policy file parses (a malformed file makes the engine fail closed and
+    //    deny gated actions, so surface it here to be fixed first).
+    match policy::check_policy_file(&root) {
+        PolicyFileStatus::Missing => println!("  ok   {POLICY_FILE} (absent; defaults apply)"),
+        PolicyFileStatus::Ok => println!("  ok   {POLICY_FILE} parses"),
+        PolicyFileStatus::Malformed(err) => errors.push(format!(
+            "{POLICY_FILE} could not be loaded ({err}); the policy engine fails closed and denies gated actions until this is fixed"
+        )),
+    }
+
+    // 6. parent-sibling working dirs (informational)
     for sibling in [
         "../repos",
         "../worktrees",

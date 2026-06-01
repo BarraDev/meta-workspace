@@ -16,6 +16,11 @@ use serde::{Deserialize, Serialize};
 use crate::cli::{PolicyAction, PolicyArgs};
 use crate::workspace;
 
+/// Path of the policy file, relative to the workspace root. Both the runtime
+/// engine ([`load_policy`]) and the `mw doctor` diagnostic ([`check_policy_file`])
+/// resolve the file through this single constant so they never diverge.
+pub const POLICY_FILE: &str = ".agents/policies.yaml";
+
 /// Subset of the Claude Code hook payload that `mw` reasons about. Unknown
 /// fields are ignored so the engine tolerates richer payloads.
 #[derive(Debug, Default, Deserialize)]
@@ -64,8 +69,7 @@ fn check() -> anyhow::Result<()> {
     // environment of this `mw policy check` subprocess, so it cannot self-approve.
     event.user_approved = user_approved_out_of_band();
 
-    let policy = load_policy();
-    let decision = evaluate(&event, &policy);
+    let decision = decision_for_load(load_policy(), &event);
     println!("{}", serde_json::to_string(&decision)?);
 
     // Exit code mirrors the decision so harnesses without JSON parsing (e.g. a
@@ -113,15 +117,42 @@ impl Default for Policy {
     }
 }
 
-fn load_policy() -> Policy {
+/// Outcome of loading the runtime policy.
+///
+/// A *malformed* policy file is deliberately distinct from a *missing* one. A
+/// missing file is a legitimate "apply safe defaults" signal; a malformed file
+/// means the author intended protection the engine cannot read, so it fails
+/// closed (see [`decision_for_load`]) instead of silently applying weaker
+/// defaults.
+enum PolicyLoad {
+    /// Policy resolved — parsed from a valid file, or safe defaults when no
+    /// workspace root or no policy file exists.
+    Loaded(Policy),
+    /// The policy file is present but could not be loaded — it failed to parse,
+    /// or could not be read (e.g. permission denied). Carries the reason.
+    Invalid(String),
+}
+
+fn load_policy() -> PolicyLoad {
     let Some(root) = workspace::find_root_from_cwd().ok() else {
-        return Policy::default();
+        return PolicyLoad::Loaded(Policy::default());
     };
 
-    let path = root.join(".agents/policies.yaml");
-    let mut policy = match std::fs::read_to_string(path) {
-        Ok(content) => parse_policy(&content).unwrap_or_default(),
-        Err(_) => Policy::default(),
+    let path = root.join(POLICY_FILE);
+    // Only a genuinely *absent* file degrades to safe defaults. A file that
+    // exists but cannot be loaded — unparseable, or unreadable (e.g. permission
+    // denied) — fails closed (see `decision_for_load`) so a broken security
+    // policy can never silently grant more than its author intended. Matching a
+    // bare `Err(_)` here would conflate "missing" with "exists but unreadable"
+    // and reopen exactly that hole. `mw doctor` surfaces the same conditions
+    // ahead of time (see `check_policy_file`).
+    let mut policy = match std::fs::read_to_string(&path) {
+        Ok(content) => match parse_policy(&content) {
+            Ok(policy) => policy,
+            Err(err) => return PolicyLoad::Invalid(err),
+        },
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Policy::default(),
+        Err(e) => return PolicyLoad::Invalid(format!("cannot read {POLICY_FILE}: {e}")),
     };
 
     if let Ok(yaml) = std::fs::read_to_string(root.join(workspace::WORKSPACE_FILE)) {
@@ -135,7 +166,7 @@ fn load_policy() -> Policy {
         }
     }
 
-    policy
+    PolicyLoad::Loaded(policy)
 }
 
 fn push_path_candidate(candidates: &mut Vec<String>, path: &str) {
@@ -151,20 +182,40 @@ fn push_existing_absolute_candidate(candidates: &mut Vec<String>, path: std::pat
     }
 }
 
-fn parse_policy(content: &str) -> Option<Policy> {
+fn parse_policy(content: &str) -> Result<Policy, String> {
     let mut policy = Policy::default();
     let mut section = String::new();
     let mut in_deny_write = false;
     let mut deny_write: Vec<String> = Vec::new();
 
-    for raw in content.lines() {
+    for (idx, raw) in content.lines().enumerate() {
         let line = raw.split('#').next().unwrap_or("").trim_end();
         let trimmed = line.trim();
         if trimmed.is_empty() {
             continue;
         }
 
-        if !raw.starts_with(' ') && trimmed.ends_with(':') {
+        // Reject structurally broken lines so a malformed policy file is
+        // surfaced (by `mw doctor`) instead of silently degrading. YAML forbids
+        // tab indentation, and every meaningful line in this format is one of:
+        // a top-level section header, a `key: value` pair, or a `- item` entry.
+        if raw.starts_with('\t') {
+            return Err(format!(
+                "line {}: tab indentation is not valid YAML",
+                idx + 1
+            ));
+        }
+        let is_section_header = !raw.starts_with(' ') && trimmed.ends_with(':');
+        let is_list_item = trimmed.starts_with('-');
+        let is_key_value = trimmed.contains(':');
+        if !is_section_header && !is_list_item && !is_key_value {
+            return Err(format!(
+                "line {}: expected `key: value`, a `- item`, or a `section:` header, found `{trimmed}`",
+                idx + 1
+            ));
+        }
+
+        if is_section_header {
             section = trimmed.trim_end_matches(':').to_string();
             in_deny_write = false;
             continue;
@@ -225,7 +276,44 @@ fn parse_policy(content: &str) -> Option<Policy> {
     if !deny_write.is_empty() {
         policy.deny_write = deny_write;
     }
-    Some(policy)
+    Ok(policy)
+}
+
+/// Result of validating the policy file for `mw doctor`.
+///
+/// Absence is valid — the engine applies safe defaults — so it is a distinct,
+/// non-failing state rather than an error.
+#[derive(Debug, PartialEq, Eq)]
+pub enum PolicyFileStatus {
+    /// No policy file at `.agents/policies.yaml`; defaults apply.
+    Missing,
+    /// The file exists and parses cleanly.
+    Ok,
+    /// The file is present but could not be loaded — it failed to parse, or
+    /// could not be read (e.g. permission denied). Carries the reason.
+    Malformed(String),
+}
+
+/// Validate the workspace policy file the same way the runtime engine loads it.
+///
+/// This powers the `mw doctor` diagnostic that surfaces a malformed
+/// `.agents/policies.yaml` so the operator can fix it before the runtime engine
+/// fails closed on it (see [`decision_for_load`]). It reuses [`POLICY_FILE`] and
+/// [`parse_policy`] so the check can never diverge from the real loader.
+pub fn check_policy_file(root: &std::path::Path) -> PolicyFileStatus {
+    let path = root.join(POLICY_FILE);
+    match std::fs::read_to_string(&path) {
+        Ok(content) => match parse_policy(&content) {
+            Ok(_) => PolicyFileStatus::Ok,
+            Err(e) => PolicyFileStatus::Malformed(e),
+        },
+        // Mirror `load_policy`: only a genuinely absent file is `Missing`. A
+        // present-but-unreadable file (e.g. permission denied) is reported so
+        // the operator is not told "absent; defaults apply" about a policy that
+        // actually exists but is being silently ignored.
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => PolicyFileStatus::Missing,
+        Err(e) => PolicyFileStatus::Malformed(format!("cannot read policy file: {e}")),
+    }
 }
 
 fn parse_bool(value: &str, default: bool) -> bool {
@@ -250,6 +338,25 @@ fn clean_scalar(value: &str) -> String {
         .trim_matches('"')
         .trim_matches('\'')
         .to_string()
+}
+
+/// Map a [`PolicyLoad`] to the decision for the current event.
+///
+/// A valid (or absent) policy is evaluated normally. A policy file that exists
+/// but cannot be loaded (unparseable or unreadable) fails closed: every gated
+/// action is denied — with a reason naming the file and the cause — until it is
+/// fixed. This is the runtime counterpart to the `mw doctor` diagnostic
+/// ([`check_policy_file`]).
+fn decision_for_load(load: PolicyLoad, event: &Event) -> Decision {
+    match load {
+        PolicyLoad::Loaded(policy) => evaluate(event, &policy),
+        PolicyLoad::Invalid(err) => Decision::Deny {
+            reason: format!(
+                "policy file {POLICY_FILE} could not be loaded ({err}); refusing to apply \
+                 weaker defaults — fix it (run `mw doctor` to validate) and retry"
+            ),
+        },
+    }
 }
 
 fn evaluate(event: &Event, policy: &Policy) -> Decision {
@@ -579,6 +686,107 @@ mod tests {
             ..Default::default()
         };
         assert!(matches!(evaluate(&event, &policy), Decision::Allow));
+    }
+
+    #[test]
+    fn parse_policy_rejects_malformed_lines() {
+        // A stray scalar with no `:` and no `-` is not a valid line in this
+        // format and must be reported, not silently ignored.
+        assert!(parse_policy("protect_paths:\n  this is broken yaml\n").is_err());
+        // Tab indentation is invalid YAML.
+        assert!(parse_policy("protect_paths:\n\tenabled: true\n").is_err());
+    }
+
+    #[test]
+    fn parse_policy_accepts_the_template_shape() {
+        let ok = "version: 1\nprotect_paths:\n  enabled: true\n  deny_write:\n    - .env\nenforce_worktree:\n  enabled: true\n  action: warn\n";
+        assert!(parse_policy(ok).is_ok());
+    }
+
+    #[test]
+    fn malformed_policy_file_fails_closed() {
+        // A present-but-unparseable policy must DENY every gated action rather
+        // than silently degrade to weaker defaults.
+        let denied = decision_for_load(
+            PolicyLoad::Invalid("line 2: tab indentation is not valid YAML".into()),
+            &ev("Write", "src/main.rs"),
+        );
+        assert!(
+            matches!(denied, Decision::Deny { .. }),
+            "malformed policy must fail closed, got {denied:?}"
+        );
+        // A valid load still evaluates normally: an innocuous write is allowed.
+        let allowed = decision_for_load(
+            PolicyLoad::Loaded(Policy::default()),
+            &ev("Write", "src/main.rs"),
+        );
+        assert!(matches!(allowed, Decision::Allow));
+    }
+
+    // A file that exists but is unreadable (permission denied) must NOT be
+    // mistaken for an absent file: that would silently drop the gates the
+    // author enabled. It must surface as `Malformed` so the engine fails closed.
+    #[cfg(unix)]
+    #[test]
+    fn check_policy_file_treats_unreadable_as_malformed_not_missing() {
+        use std::os::unix::fs::PermissionsExt;
+        use std::sync::atomic::{AtomicU64, Ordering};
+        static N: AtomicU64 = AtomicU64::new(0);
+        let root = std::env::temp_dir().join(format!(
+            "mw-policy-perm-{}-{}",
+            std::process::id(),
+            N.fetch_add(1, Ordering::Relaxed)
+        ));
+        std::fs::create_dir_all(root.join(".agents")).unwrap();
+        let path = root.join(POLICY_FILE);
+        std::fs::write(&path, "protect_paths:\n  enabled: true\n").unwrap();
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o000)).unwrap();
+
+        // If the file is still readable, permissions are not enforced (e.g. the
+        // test runs as root) and this scenario cannot be exercised — skip.
+        let unreadable = std::fs::read_to_string(&path).is_err();
+        let status = check_policy_file(&root);
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o644)).ok();
+        std::fs::remove_dir_all(&root).ok();
+
+        if unreadable {
+            assert!(
+                matches!(status, PolicyFileStatus::Malformed(_)),
+                "unreadable policy must not read as Missing, got {status:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn check_policy_file_reports_missing_ok_and_malformed() {
+        use std::sync::atomic::{AtomicU64, Ordering};
+        static N: AtomicU64 = AtomicU64::new(0);
+        let root = std::env::temp_dir().join(format!(
+            "mw-policy-check-{}-{}",
+            std::process::id(),
+            N.fetch_add(1, Ordering::Relaxed)
+        ));
+        std::fs::create_dir_all(root.join(".agents")).unwrap();
+
+        // Absent file is a valid, non-failing state.
+        assert_eq!(check_policy_file(&root), PolicyFileStatus::Missing);
+
+        // A valid file parses.
+        std::fs::write(
+            root.join(POLICY_FILE),
+            "protect_paths:\n  enabled: true\n  deny_write:\n    - .env\n",
+        )
+        .unwrap();
+        assert_eq!(check_policy_file(&root), PolicyFileStatus::Ok);
+
+        // A malformed file is detected and carries an explanatory error.
+        std::fs::write(root.join(POLICY_FILE), "protect_paths:\n  not valid yaml\n").unwrap();
+        assert!(matches!(
+            check_policy_file(&root),
+            PolicyFileStatus::Malformed(_)
+        ));
+
+        std::fs::remove_dir_all(&root).ok();
     }
 
     #[test]
