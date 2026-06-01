@@ -7,6 +7,7 @@
 
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
+use std::sync::atomic::{AtomicU64, Ordering};
 
 const BIN: &str = env!("CARGO_BIN_EXE_mw");
 
@@ -14,9 +15,15 @@ const BIN: &str = env!("CARGO_BIN_EXE_mw");
 /// return its root. It mirrors the real content layer enough for `doctor`,
 /// `memory`, and `migrate` to pass.
 fn fixture() -> PathBuf {
+    // A process-wide counter guarantees a unique directory even when two
+    // parallel tests read the same coarse-resolution timestamp (observed on
+    // macOS), which previously made two fixtures share one directory and the
+    // second symlink creation fail with "already exists".
+    static COUNTER: AtomicU64 = AtomicU64::new(0);
     let unique = format!(
-        "mw-it-{}-{}",
+        "mw-it-{}-{}-{}",
         std::process::id(),
+        COUNTER.fetch_add(1, Ordering::Relaxed),
         std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap()
