@@ -1,7 +1,9 @@
 name: release
 
-# Build prebuilt `mw` binaries for Linux/macOS/Windows and attach them, with
-# SHA-256 checksums, to a GitHub Release when a `v*` tag is pushed.
+# On a `v*` tag: create the GitHub Release once, then build `mw` for
+# Linux/macOS/Windows and upload each archive (with a SHA-256 checksum).
+# The release is created in a single prerequisite job so the matrix build
+# jobs never race to create the same release.
 on:
   push:
     tags:
@@ -11,8 +13,27 @@ permissions:
   contents: write
 
 jobs:
-  build:
-    name: build ${{ matrix.target }}
+  create-release:
+    name: create release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create the release if it does not exist
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release $GITHUB_REF_NAME already exists; reusing it."
+          else
+            gh release create "$GITHUB_REF_NAME" \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "$GITHUB_REF_NAME" \
+              --notes "Prebuilt \`mw\` binaries. See CHANGELOG.md for changes."
+          fi
+
+  upload:
+    name: build + upload ${{ matrix.target }}
+    needs: create-release
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -34,29 +55,27 @@ jobs:
       - name: Build
         run: cargo build --release --locked --target ${{ matrix.target }}
 
-      - name: Package (Unix)
+      - name: Package and upload (Unix)
         if: runner.os != 'Windows'
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           name="mw-${{ matrix.target }}"
           tar -czf "$name.tar.gz" -C "target/${{ matrix.target }}/release" mw
           shasum -a 256 "$name.tar.gz" > "$name.tar.gz.sha256"
+          gh release upload "$GITHUB_REF_NAME" "$name.tar.gz" "$name.tar.gz.sha256" \
+            --repo "$GITHUB_REPOSITORY" --clobber
 
-      - name: Package (Windows)
+      - name: Package and upload (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           $name = "mw-${{ matrix.target }}"
           Compress-Archive -Path "target/${{ matrix.target }}/release/mw.exe" -DestinationPath "$name.zip"
           $hash = (Get-FileHash "$name.zip" -Algorithm SHA256).Hash.ToLower()
           "$hash  $name.zip" | Out-File -FilePath "$name.zip.sha256" -Encoding ascii
-
-      - name: Attach to release
-        uses: softprops/action-gh-release@v2
-        with:
-          fail_on_unmatched_files: false
-          files: |
-            mw-${{ matrix.target }}.tar.gz
-            mw-${{ matrix.target }}.tar.gz.sha256
-            mw-${{ matrix.target }}.zip
-            mw-${{ matrix.target }}.zip.sha256
+          gh release upload "$env:GITHUB_REF_NAME" "$name.zip" "$name.zip.sha256" `
+            --repo "$env:GITHUB_REPOSITORY" --clobber
