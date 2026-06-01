@@ -18,6 +18,28 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Verify version and CHANGELOG before releasing
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+
+          # The tag must match Cargo.toml's version: a release whose tag and
+          # crate version disagree would ship mislabeled binaries (and break a
+          # future crates.io publish).
+          crate_version="$(grep -m1 -E '^version = ' Cargo.toml | sed -E 's/^version = "(.*)"/\1/')"
+          if [ "$crate_version" != "$version" ]; then
+            echo "::error::tag $GITHUB_REF_NAME (version $version) does not match Cargo.toml version $crate_version"
+            exit 1
+          fi
+
+          # CHANGELOG.md must carry release notes for this version, in Keep a
+          # Changelog form, e.g. `## [0.1.1] - 2026-06-01`.
+          if ! grep -qE "^## \[${version//./\\.}\]" CHANGELOG.md; then
+            echo "::error::CHANGELOG.md has no '## [$version]' section; move the Unreleased notes under a '## [$version]' heading before tagging"
+            exit 1
+          fi
+          echo "Verified Cargo.toml version and CHANGELOG entry for $version."
       - name: Create the release if it does not exist
         env:
           GH_TOKEN: ${{ github.token }}
