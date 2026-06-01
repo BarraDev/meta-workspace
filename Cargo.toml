@@ -1,7 +1,7 @@
 [package]
 name = "meta-workspace"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 rust-version = "1.96"
 authors = ["BarraDev <ruiandrada@barradev.com>"]
 description = "mw — maintenance CLI for the generic one-company-at-a-time meta-workspace template."

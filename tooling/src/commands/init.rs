@@ -7,7 +7,7 @@
 use std::path::PathBuf;
 
 use crate::cli::InitArgs;
-use crate::links::{ensure_link, LinkStatus, COMPAT_LINKS};
+use crate::links::{COMPAT_LINKS, LinkStatus, ensure_link};
 use crate::{embed, scaffold, workspace};
 
 /// Parent-sibling working directories created next to a workspace.

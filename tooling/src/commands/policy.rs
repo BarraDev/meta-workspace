@@ -255,27 +255,25 @@ fn clean_scalar(value: &str) -> String {
 fn evaluate(event: &Event, policy: &Policy) -> Decision {
     let _ = &event.hook_event_name;
 
-    if policy.protect_paths_enabled && is_write_tool(&event.tool_name) {
-        if let Some(path) = target_path(&event.tool_input) {
-            if is_protected(&path, &policy.deny_write) {
-                return Decision::Deny {
-                    reason: format!("writing to protected path is not allowed: {path}"),
-                };
-            }
-        }
+    if policy.protect_paths_enabled
+        && is_write_tool(&event.tool_name)
+        && let Some(path) = target_path(&event.tool_input)
+        && is_protected(&path, &policy.deny_write)
+    {
+        return Decision::Deny {
+            reason: format!("writing to protected path is not allowed: {path}"),
+        };
     }
 
-    if policy.enforce_worktree_enabled && is_write_tool(&event.tool_name) {
-        if let Some(path) = target_path(&event.tool_input) {
-            if is_clean_checkout_path(&path, policy) {
-                return decision_for_effect(
-                    policy.enforce_worktree_action,
-                    format!(
-                        "edit appears to target a clean checkout instead of a worktree: {path}"
-                    ),
-                );
-            }
-        }
+    if policy.enforce_worktree_enabled
+        && is_write_tool(&event.tool_name)
+        && let Some(path) = target_path(&event.tool_input)
+        && is_clean_checkout_path(&path, policy)
+    {
+        return decision_for_effect(
+            policy.enforce_worktree_action,
+            format!("edit appears to target a clean checkout instead of a worktree: {path}"),
+        );
     }
 
     if policy.draft_only_pr_enabled
@@ -362,10 +360,10 @@ fn is_pr_publish_event(tool_name: &str, input: &serde_json::Value) -> bool {
     }
 
     for key in ["command", "cmd", "args", "input"] {
-        if let Some(value) = input.get(key).and_then(|v| v.as_str()) {
-            if is_pr_publish_command(value) {
-                return true;
-            }
+        if let Some(value) = input.get(key).and_then(|v| v.as_str())
+            && is_pr_publish_command(value)
+        {
+            return true;
         }
     }
     false
