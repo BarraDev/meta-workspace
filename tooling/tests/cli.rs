@@ -169,6 +169,61 @@ fn doctor_reports_schema_errors_with_exit_1() {
 }
 
 #[test]
+fn doctor_ok_when_policy_file_absent() {
+    // The fixture has no .agents/policies.yaml; absence is valid (defaults
+    // apply) and must not produce an error or warning.
+    let root = fixture();
+    let out = run(&root, &["doctor"], "");
+    let s = stdout(&out);
+    assert!(out.status.success(), "{s}");
+    assert!(
+        s.contains("ok   .agents/policies.yaml (absent; defaults apply)"),
+        "missing absent-policy ok line: {s}"
+    );
+    std::fs::remove_dir_all(&root).ok();
+}
+
+#[test]
+fn doctor_ok_when_policy_file_parses() {
+    let root = fixture();
+    std::fs::write(
+        root.join(".agents/policies.yaml"),
+        "protect_paths:\n  enabled: true\n  deny_write:\n    - .env\n",
+    )
+    .unwrap();
+    let out = run(&root, &["doctor"], "");
+    let s = stdout(&out);
+    assert!(out.status.success(), "{s}");
+    assert!(
+        s.contains("ok   .agents/policies.yaml parses"),
+        "missing parse-ok line: {s}"
+    );
+    std::fs::remove_dir_all(&root).ok();
+}
+
+#[test]
+fn doctor_errors_on_malformed_policy_file() {
+    let root = fixture();
+    std::fs::write(
+        root.join(".agents/policies.yaml"),
+        "protect_paths:\n  this is not valid yaml\n",
+    )
+    .unwrap();
+    let out = run(&root, &["doctor"], "");
+    let s = stdout(&out);
+    assert_eq!(
+        out.status.code(),
+        Some(1),
+        "malformed policy must fail doctor: {s}"
+    );
+    assert!(
+        s.contains("ERR  .agents/policies.yaml could not be loaded"),
+        "missing malformed-policy error: {s}"
+    );
+    std::fs::remove_dir_all(&root).ok();
+}
+
+#[test]
 fn memory_read_set_revert_roundtrip() {
     let root = fixture();
     assert!(stdout(&run(&root, &["memory"], "")).contains("profile = none"));
@@ -276,6 +331,70 @@ fn policy_denies_pr_publish_without_approval_when_configured() {
     assert!(out.status.success());
     assert!(stdout(&out).contains("\"decision\":\"allow\""));
     std::fs::remove_dir_all(&root).ok();
+}
+
+#[test]
+fn policy_fails_closed_on_malformed_policy_file() {
+    let root = fixture();
+    // A structurally broken policy file must not silently degrade to weaker
+    // defaults: the engine denies the (otherwise innocuous) action and exits 1.
+    std::fs::write(
+        root.join(".agents/policies.yaml"),
+        "protect_paths:\n  this is not valid yaml\n",
+    )
+    .unwrap();
+    let out = run(
+        &root,
+        &["policy", "check"],
+        r#"{"tool_name":"Write","tool_input":{"file_path":"src/main.rs"}}"#,
+    );
+    let s = stdout(&out);
+    assert_eq!(
+        out.status.code(),
+        Some(1),
+        "malformed policy must deny: {s}"
+    );
+    assert!(s.contains("\"decision\":\"deny\""), "expected deny: {s}");
+    assert!(
+        s.contains("could not be loaded"),
+        "reason should name the cause: {s}"
+    );
+    std::fs::remove_dir_all(&root).ok();
+}
+
+#[cfg(unix)]
+#[test]
+fn policy_fails_closed_on_unreadable_policy_file() {
+    use std::os::unix::fs::PermissionsExt;
+    let root = fixture();
+    // A present-but-unreadable policy (permission denied) must not be mistaken
+    // for absent: the engine fails closed and denies, exiting 1.
+    let path = root.join(".agents/policies.yaml");
+    std::fs::write(&path, "protect_paths:\n  enabled: true\n").unwrap();
+    std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o000)).unwrap();
+
+    // Skip if the file is still readable (e.g. running as root): the scenario
+    // cannot be exercised when permission bits are not enforced.
+    if std::fs::read_to_string(&path).is_ok() {
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o644)).ok();
+        std::fs::remove_dir_all(&root).ok();
+        return;
+    }
+
+    let out = run(
+        &root,
+        &["policy", "check"],
+        r#"{"tool_name":"Write","tool_input":{"file_path":"src/main.rs"}}"#,
+    );
+    let s = stdout(&out);
+    std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o644)).ok();
+    std::fs::remove_dir_all(&root).ok();
+    assert_eq!(
+        out.status.code(),
+        Some(1),
+        "unreadable policy must deny: {s}"
+    );
+    assert!(s.contains("\"decision\":\"deny\""), "expected deny: {s}");
 }
 
 #[test]
