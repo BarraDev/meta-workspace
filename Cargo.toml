@@ -2,7 +2,7 @@
 name = "meta-workspace"
 version = "0.1.0"
 edition = "2021"
-rust-version = "1.85"
+rust-version = "1.96"
 authors = ["BarraDev <ruiandrada@barradev.com>"]
 description = "mw — maintenance CLI for the generic one-company-at-a-time meta-workspace template."
 license = "MIT OR Apache-2.0"

@@ -45,11 +45,20 @@ jobs:
         run: cargo test --doc
 
   msrv:
-    name: msrv (1.85)
+    # The minimum supported Rust version is declared once, in Cargo.toml
+    # (`rust-version`). This job reads it from there instead of hardcoding a
+    # toolchain ref, so there is a single source of truth and nothing for
+    # Dependabot to "bump" to a not-yet-released version.
+    name: msrv
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: dtolnay/rust-toolchain@1.85
+      - name: Resolve MSRV from Cargo.toml
+        id: msrv
+        run: echo "version=$(grep -m1 '^rust-version' Cargo.toml | sed -E 's/.*"(.*)".*/\1/')" >> "$GITHUB_OUTPUT"
+      - uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9 # master
+        with:
+          toolchain: ${{ steps.msrv.outputs.version }}
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
       - name: Build at the pinned minimum supported Rust version
         run: cargo build --locked

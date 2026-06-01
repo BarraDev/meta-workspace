@@ -18,6 +18,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Raised the minimum supported Rust version (MSRV) from 1.85 to 1.96. The
+  `msrv` CI job now derives the version from `Cargo.toml`'s `rust-version`
+  (single source of truth) instead of a hardcoded toolchain ref, so the floor
+  is changed in exactly one place.
+- CI: third-party GitHub Actions (`actions/checkout`, `Swatinem/rust-cache`,
+  `EmbarkStudios/cargo-deny-action`) are pinned to commit SHAs with version
+  comments for supply-chain integrity; `dtolnay/rust-toolchain` stays on
+  `@stable` and the MSRV input by design.
 - Documentation: removed the `modify{input}` policy decision from the README,
   workspace contract, and module docs — the engine implements only
   `allow`/`deny`/`warn`, so the contract no longer advertises an unimplemented
