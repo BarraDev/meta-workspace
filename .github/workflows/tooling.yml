@@ -11,15 +11,12 @@ on:
       - "tooling/**"
       - "template/**"
       - ".github/workflows/tooling.yml"
+  # No `paths` filter on pull_request: the CI jobs are required status checks
+  # in the branch ruleset, so they must run on every PR. A path filter would
+  # leave checks unreported (and thus the PR un-mergeable) whenever a change
+  # touches none of the filtered paths. The `push` filter above still scopes
+  # branch pushes.
   pull_request:
-    paths:
-      - "Cargo.toml"
-      - "Cargo.lock"
-      - "rust-toolchain.toml"
-      - "deny.toml"
-      - "tooling/**"
-      - "template/**"
-      - ".github/workflows/tooling.yml"
 
 jobs:
   test:

@@ -1,0 +1,25 @@
+# Code owners for meta-workspace.
+#
+# Syntax: <path pattern>  <owner(s)>. The LAST matching pattern wins, so the
+# more specific, sensitive paths are listed after the catch-all.
+#
+# Ownership is documented here now. Enforcement is intentionally OFF in the
+# branch ruleset (`require_code_owner_review: false`) because a single
+# maintainer cannot review their own pull requests. Flip the ruleset's
+# `require_code_owner_review` to true once a second reviewer exists — at which
+# point these path rules will require owner sign-off on the sensitive areas
+# below without forcing review on routine changes.
+
+# Default owner for the whole repository.
+*                                   @shingonoide
+
+# Supply-chain- and CI-sensitive surfaces.
+/.github/                           @shingonoide
+/deny.toml                          @shingonoide
+/Cargo.toml                         @shingonoide
+/Cargo.lock                         @shingonoide
+
+# Security-sensitive: the cross-harness policy enforcement engine and the
+# security policy itself warrant extra scrutiny once review is enforced.
+/tooling/src/commands/policy.rs     @shingonoide
+/SECURITY.md                        @shingonoide
