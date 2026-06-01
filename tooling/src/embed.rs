@@ -7,7 +7,7 @@
 
 use std::path::Path;
 
-use include_dir::{include_dir, Dir};
+use include_dir::{Dir, include_dir};
 
 /// The embedded `template/` directory. The crate manifest lives at the
 /// repository root, so `template/` sits directly under `$CARGO_MANIFEST_DIR`.

@@ -4,7 +4,7 @@
 //! instruction files and harness skill/command/agent directories.
 
 use crate::cli::LinksArgs;
-use crate::links::{ensure_link, LinkStatus, COMPAT_LINKS};
+use crate::links::{COMPAT_LINKS, LinkStatus, ensure_link};
 use crate::workspace;
 
 pub fn run(args: LinksArgs) -> anyhow::Result<()> {

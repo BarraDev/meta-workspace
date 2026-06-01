@@ -50,10 +50,11 @@ pub fn read_scalar(yaml: &str, key: &str) -> Option<String> {
         if let Some(rest) = trimmed.strip_prefix(&needle) {
             let mut value = rest.trim();
             // strip a trailing inline comment that is not inside quotes
-            if !value.starts_with('"') && !value.starts_with('\'') {
-                if let Some(idx) = value.find(" #") {
-                    value = value[..idx].trim();
-                }
+            if !value.starts_with('"')
+                && !value.starts_with('\'')
+                && let Some(idx) = value.find(" #")
+            {
+                value = value[..idx].trim();
             }
             let value = value.trim_matches(|c| c == '"' || c == '\'');
             if value.is_empty() {
