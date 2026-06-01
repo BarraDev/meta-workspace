@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `mw policy check`: `draft_only_pr.require_explicit_user_approval: false` now
+  loosens the draft-only PR gate (approval not required → allow) instead of
+  denying unconditionally; the default (`true`) is unchanged. Added a
+  regression test for the opt-out branch.
+- `mw sdd` no longer panics on the unreachable pre-1970 clock branch when
+  building its staging temp dir (`SystemTime` error now falls back to `0`).
+
+### Changed
+
+- Documentation: removed the `modify{input}` policy decision from the README,
+  workspace contract, and module docs — the engine implements only
+  `allow`/`deny`/`warn`, so the contract no longer advertises an unimplemented
+  variant.
+
 ## [0.1.0] - 2026-05-31
 
 First tagged release of the `meta-workspace` project and the `mw` maintenance CLI.
